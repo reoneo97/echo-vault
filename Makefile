@@ -1,9 +1,12 @@
 PLUGIN_SRC = ./plugin
 PLUGIN_DEST = ./vault/echo-vault/.obsidian/plugins/echo-vault
 
-.PHONY: install dev start
+.PHONY: build install dev start
 
-install:
+build:
+	cd $(PLUGIN_SRC) && npm run build
+
+install: build
 	mkdir -p $(PLUGIN_DEST)
 	rsync -av --exclude .git $(PLUGIN_SRC)/ $(PLUGIN_DEST)/
 
