@@ -1,0 +1,91 @@
+.echovault-review-modal .modal-content {
+    padding: 24px;
+}
+
+.echovault-progress {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.echovault-question {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+
+.echovault-answer {
+    font-size: 1.05em;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    line-height: 1.5;
+}
+
+.echovault-ratings {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.echovault-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    color: var(--text-normal);
+}
+
+.echovault-btn:hover {
+    background: var(--interactive-hover);
+}
+
+.echovault-btn-show {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+    margin-top: 12px;
+}
+
+.echovault-btn-again {
+    background: var(--text-error);
+    color: white;
+    border-color: var(--text-error);
+}
+
+.echovault-btn-hard {
+    background: var(--color-orange);
+    color: white;
+    border-color: var(--color-orange);
+}
+
+.echovault-btn-good {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-btn-easy {
+    background: var(--color-green);
+    color: white;
+    border-color: var(--color-green);
+}
+
+.echovault-complete {
+    text-align: center;
+    padding: 24px 0;
+}
+
+.echovault-complete h2 {
+    margin-bottom: 8px;
+}
+
+.echovault-complete p {
+    color: var(--text-muted);
+    margin-bottom: 20px;
+}
