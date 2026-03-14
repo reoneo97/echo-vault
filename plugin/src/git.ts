@@ -16,10 +16,13 @@ function run(
     });
 }
 
-export async function isGitRepo(vaultPath: string): Promise<boolean> {
+export async function isOwnGitRepo(vaultPath: string): Promise<boolean> {
     try {
-        await run("git", ["rev-parse", "--is-inside-work-tree"], vaultPath);
-        return true;
+        const toplevel = (
+            await run("git", ["rev-parse", "--show-toplevel"], vaultPath)
+        ).trim();
+        // Only true if the git root IS the vault path, not a parent
+        return toplevel === vaultPath || toplevel === vaultPath.replace(/\/$/, "");
     } catch {
         return false;
     }

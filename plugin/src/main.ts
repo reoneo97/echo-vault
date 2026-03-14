@@ -4,7 +4,7 @@ import { EchoVaultSettingTab } from "./settings";
 import { FlashcardStore } from "./store";
 import { checkBackendHealth } from "./api-client";
 import { commitAndGenerate } from "./generate";
-import { ReviewModal } from "./review-modal";
+import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
 export default class EchoVaultPlugin extends Plugin {
     settings: EchoVaultSettings = DEFAULT_SETTINGS;
@@ -20,22 +20,25 @@ export default class EchoVaultPlugin extends Plugin {
         // Settings tab
         this.addSettingTab(new EchoVaultSettingTab(this.app, this));
 
+        // Register sidebar view
+        this.registerView(VIEW_TYPE, (leaf) => new EchoVaultSidebarView(leaf, this));
+
         // Commands
         this.addCommand({
             id: "commit-and-generate",
             name: "Commit & Generate Flashcards",
-            callback: () => this.handleCommitAndGenerate(),
+            callback: () => this.commitAndGenerate(),
         });
 
         this.addCommand({
-            id: "review-flashcards",
-            name: "Review Flashcards",
-            callback: () => this.handleReview(),
+            id: "open-sidebar",
+            name: "Open EchoVault Panel",
+            callback: () => this.activateSidebar(),
         });
 
-        // Ribbon icon
-        this.addRibbonIcon("brain", "Review EchoVault Flashcards", () =>
-            this.handleReview()
+        // Ribbon icon opens the sidebar
+        this.addRibbonIcon("brain", "Open EchoVault", () =>
+            this.activateSidebar()
         );
 
         // Status bar
@@ -47,9 +50,7 @@ export default class EchoVaultPlugin extends Plugin {
         if (healthy) {
             new Notice("Connected to EchoVault backend");
         } else {
-            new Notice(
-                "EchoVault backend not reachable. Check settings."
-            );
+            new Notice("EchoVault backend not reachable. Check settings.");
         }
 
         console.log("EchoVault loaded");
@@ -71,7 +72,7 @@ export default class EchoVaultPlugin extends Plugin {
         await this.saveData(this.settings);
     }
 
-    private getVaultPath(): string {
+    getVaultPath(): string {
         const adapter = this.app.vault.adapter as { getBasePath?: () => string };
         if (adapter.getBasePath) {
             return adapter.getBasePath();
@@ -79,11 +80,12 @@ export default class EchoVaultPlugin extends Plugin {
         throw new Error("Could not determine vault path");
     }
 
-    private async handleCommitAndGenerate() {
+    async commitAndGenerate() {
         try {
             const vaultPath = this.getVaultPath();
             await commitAndGenerate(vaultPath, this.store, this.settings);
             this.updateStatusBar();
+            this.refreshSidebar();
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);
@@ -91,13 +93,27 @@ export default class EchoVaultPlugin extends Plugin {
         }
     }
 
-    private handleReview() {
-        new ReviewModal(this.app, this.store).open();
-        // Update status bar after modal closes
-        setTimeout(() => this.updateStatusBar(), 500);
+    private async activateSidebar() {
+        const existing = this.app.workspace.getLeavesOfType(VIEW_TYPE);
+        if (existing.length > 0) {
+            this.app.workspace.revealLeaf(existing[0]);
+            return;
+        }
+        const leaf = this.app.workspace.getRightLeaf(false);
+        if (leaf) {
+            await leaf.setViewState({ type: VIEW_TYPE, active: true });
+            this.app.workspace.revealLeaf(leaf);
+        }
     }
 
-    private updateStatusBar() {
+    private refreshSidebar() {
+        for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE)) {
+            const view = leaf.view as EchoVaultSidebarView;
+            view.refresh();
+        }
+    }
+
+    updateStatusBar() {
         if (!this.statusBarEl) return;
         const { due, total } = this.store.getStats();
         this.statusBarEl.setText(

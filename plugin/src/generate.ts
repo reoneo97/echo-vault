@@ -1,5 +1,5 @@
 import { Notice } from "obsidian";
-import { gitCommit, gitDiff, isGitRepo, gitInit } from "./git";
+import { gitCommit, gitDiff, isOwnGitRepo, gitInit } from "./git";
 import { generateFlashcards } from "./api-client";
 import { FlashcardStore } from "./store";
 import { EchoVaultSettings, Flashcard } from "./types";
@@ -10,8 +10,8 @@ export async function commitAndGenerate(
     store: FlashcardStore,
     settings: EchoVaultSettings
 ): Promise<void> {
-    // Ensure git repo exists
-    if (!(await isGitRepo(vaultPath))) {
+    // Ensure the vault has its own git repo (not a parent's)
+    if (!(await isOwnGitRepo(vaultPath))) {
         new Notice("Initializing git repository in vault...");
         await gitInit(vaultPath);
         // Need an initial commit first

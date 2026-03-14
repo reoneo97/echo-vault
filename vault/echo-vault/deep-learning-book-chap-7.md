@@ -71,3 +71,7 @@ $$
 - Usually used for CV tasks
 - Idea is to add additional noise or perform rotations, scaling to help the model learn invariances within the data 
 ## Sparse Representation
+
+
+
+Is there some difference here now that I have written some stuff?

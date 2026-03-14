@@ -1,40 +1,93 @@
-.echovault-review-modal .modal-content {
-    padding: 24px;
+/* Sidebar */
+.echovault-sidebar {
+    padding: 16px;
+}
+
+.echovault-sidebar-title {
+    margin: 0 0 16px 0;
+}
+
+/* Stats */
+.echovault-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.echovault-stat {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-stat-value {
+    font-size: 1.5em;
+    font-weight: 700;
+}
+
+.echovault-stat-label {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+/* Actions */
+.echovault-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+/* Review header */
+.echovault-review-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.echovault-btn-back {
+    padding: 4px 12px;
+    font-size: 0.85em;
 }
 
 .echovault-progress {
     font-size: 0.85em;
     color: var(--text-muted);
-    margin-bottom: 16px;
 }
 
+/* Cards */
 .echovault-question {
-    font-size: 1.2em;
+    font-size: 1.1em;
     font-weight: 600;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     line-height: 1.5;
 }
 
 .echovault-answer {
-    font-size: 1.05em;
-    margin-bottom: 24px;
-    padding: 16px;
+    font-size: 1em;
+    margin-bottom: 20px;
+    padding: 14px;
     background: var(--background-secondary);
     border-radius: 8px;
     line-height: 1.5;
 }
 
+/* Buttons */
 .echovault-ratings {
     display: flex;
-    gap: 8px;
-    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
 .echovault-btn {
-    padding: 8px 20px;
+    padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.95em;
+    font-size: 0.9em;
     border: 1px solid var(--background-modifier-border);
     background: var(--interactive-normal);
     color: var(--text-normal);
@@ -44,38 +97,59 @@
     background: var(--interactive-hover);
 }
 
+.echovault-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.echovault-btn-primary {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
+    width: 100%;
+    padding: 10px;
+}
+
+.echovault-btn-primary:hover {
+    opacity: 0.9;
+}
+
 .echovault-btn-show {
     display: block;
     width: 100%;
-    padding: 12px;
-    font-size: 1em;
-    margin-top: 12px;
+    padding: 10px;
+    font-size: 0.95em;
 }
 
 .echovault-btn-again {
+    flex: 1;
     background: var(--text-error);
     color: white;
     border-color: var(--text-error);
 }
 
 .echovault-btn-hard {
+    flex: 1;
     background: var(--color-orange);
     color: white;
     border-color: var(--color-orange);
 }
 
 .echovault-btn-good {
+    flex: 1;
     background: var(--interactive-accent);
     color: white;
     border-color: var(--interactive-accent);
 }
 
 .echovault-btn-easy {
+    flex: 1;
     background: var(--color-green);
     color: white;
     border-color: var(--color-green);
 }
 
+/* Complete screen */
 .echovault-complete {
     text-align: center;
     padding: 24px 0;
