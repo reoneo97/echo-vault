@@ -1,3 +1,5 @@
 vault/echo-vault/.obsidian
 .claude
 **/node_modules/**
+*.egg-info/
+CLAUDE.md
