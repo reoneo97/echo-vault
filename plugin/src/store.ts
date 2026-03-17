@@ -70,6 +70,15 @@ export class FlashcardStore {
         }
     }
 
+    getAllCards(): Flashcard[] {
+        return [...this.data.cards];
+    }
+
+    async deleteCard(id: string): Promise<void> {
+        this.data.cards = this.data.cards.filter((c) => c.id !== id);
+        await this.save();
+    }
+
     hasCommit(commitHash: string): boolean {
         return this.data.cards.some((c) => c.commitHash === commitHash);
     }
