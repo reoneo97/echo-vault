@@ -1,5 +1,8 @@
-export interface Flashcard {
+export type CardType = "qa" | "mcq" | "tf";
+
+export interface BaseFlashcard {
     id: string;
+    type: CardType;
     question: string;
     answer: string;
     sourceNotePath: string;
@@ -11,6 +14,23 @@ export interface Flashcard {
     interval: number;
     nextReviewDate: string;
 }
+
+export interface QAFlashcard extends BaseFlashcard {
+    type: "qa";
+}
+
+export interface MCQFlashcard extends BaseFlashcard {
+    type: "mcq";
+    choices: string[];
+    correctIndex: number;
+}
+
+export interface TFFlashcard extends BaseFlashcard {
+    type: "tf";
+    correctValue: boolean;
+}
+
+export type Flashcard = QAFlashcard | MCQFlashcard | TFFlashcard;
 
 export interface FlashcardData {
     version: number;

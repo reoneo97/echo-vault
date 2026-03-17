@@ -74,6 +74,7 @@ export async function commitAndGenerate(
     const today = getTodayDateString();
     const newCards: Flashcard[] = response.cards.map((c) => ({
         id: generateId(),
+        type: "qa" as const,
         question: c.question,
         answer: c.answer,
         sourceNotePath: sourceNote,
