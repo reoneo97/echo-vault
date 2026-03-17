@@ -1,31 +1,47 @@
-# EchoVault
+<p align="center">
+  <img src="assets/icon.svg" alt="EchoVault" width="96" height="96" />
+</p>
 
-AI-powered flashcard generation for Obsidian using git diffs and spaced repetition.
+<h1 align="center">EchoVault</h1>
 
-Write notes, commit changes, and EchoVault automatically generates flashcards from what's new — then schedules reviews using the SM-2 algorithm.
+<p align="center">
+  AI-powered flashcard generation for Obsidian using git diffs and spaced repetition.
+</p>
+
+<p align="center">
+  Write notes, commit changes, and EchoVault automatically generates flashcards from what's new — then schedules reviews using the SM-2 algorithm.
+</p>
+
+---
 
 ## How It Works
 
 1. Write or edit notes in Obsidian
 2. Run **Commit & Generate Flashcards** — the plugin commits your vault and extracts the diff
-3. New content is sent to a Python backend which calls an LLM (via OpenRouter) to create Q&A flashcards
+3. New content is sent to a Python backend which calls an LLM (via OpenRouter) to create flashcards
 4. Cards are stored locally in your vault as JSON
 5. Run **Review Flashcards** to study due cards with spaced repetition scheduling
+
+## Card Types
+
+- **Q&A** — classic question and answer
+- **Multiple Choice** — pick from 4 options with instant correct/incorrect feedback
+- **True / False** — binary choice with color-coded feedback
 
 ## Architecture
 
 ```
-Obsidian Plugin (TypeScript)          Python Backend (FastAPI)
-┌──────────────────────────┐          ┌─────────────────────┐
-│  Git ops (commit, diff)  │          │                     │
-│  Flashcard storage       │── diff ─▶│  OpenRouter LLM API │
-│  SM-2 scheduling         │◀─ cards ─│                     │
-│  Review modal UI         │          └─────────────────────┘
-└──────────────────────────┘
+Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI)
+┌──────────────────────────────┐         ┌─────────────────────┐
+│  Git ops (commit, diff)      │         │                     │
+│  Flashcard storage           │── diff ─▶  OpenRouter LLM API │
+│  SM-2 scheduling             │◀─ cards ─│                     │
+│  React sidebar UI            │         └─────────────────────┘
+└──────────────────────────────┘
 ```
 
 - **Plugin** handles everything local: UI, git, storage, review scheduling
-- **Backend** handles LLM calls only: receives diff text, returns Q&A pairs
+- **Backend** handles LLM calls only: receives diff text, returns flashcard pairs
 - Reviews work fully offline — the backend is only needed for generating new cards
 
 ## Setup
@@ -63,14 +79,17 @@ Then copy these files into your vault at `.obsidian/plugins/echo-vault/`:
 - `manifest.json`
 - `styles.css`
 
+Or use `make install` to build and copy to the test vault automatically.
+
 Enable the plugin in Obsidian settings.
 
 ## Usage
 
 | Command | What it does |
 |---|---|
-| **Commit & Generate Flashcards** | Commits vault changes via git, extracts the diff, sends new content to the backend, and stores the generated flashcards |
-| **Review Flashcards** | Opens a modal with due cards — flip to reveal the answer, then rate (Again / Hard / Good / Easy) |
+| **Commit & Generate Flashcards** | Commits vault changes, extracts the diff, generates flashcards via LLM |
+| **Review Flashcards** | Opens the sidebar with due cards — answer then rate (Again / Hard / Good / Easy) |
+| **Browse All Cards** | Search, filter, and manage all flashcards with the card browser |
 
 A ribbon icon (brain) and status bar item showing due card count are also available.
 
@@ -93,15 +112,14 @@ A ribbon icon (brain) and status bar item showing due card count are also availa
 
 ```
 echo-vault/
+├── assets/
+│   └── icon.svg             # Project icon
 ├── backend/
 │   ├── pyproject.toml
 │   ├── .env.example
-│   └── app/
-│       ├── main.py          # FastAPI app + CORS
-│       ├── routes.py        # /health, /generate-flashcards
-│       ├── openrouter.py    # LLM API client
-│       ├── schemas.py       # Pydantic models
-│       └── config.py        # Settings from .env
+│   ├── app/                 # FastAPI server
+│   ├── experiments/         # Model comparison & prompt evals
+│   └── fine_tuning/         # Fine-tuning data prep & scripts
 │
 └── plugin/
     ├── manifest.json
@@ -109,13 +127,25 @@ echo-vault/
     ├── styles.css
     └── src/
         ├── main.ts          # Plugin entry point
-        ├── types.ts         # Interfaces and defaults
+        ├── sidebar-view.tsx  # Obsidian view wrapper (mounts React)
+        ├── types.ts         # Interfaces (QA, MCQ, TF card types)
         ├── settings.ts      # Settings tab UI
         ├── sm2.ts           # SM-2 algorithm
         ├── store.ts         # Flashcard JSON persistence
         ├── git.ts           # Git operations
         ├── api-client.ts    # Backend HTTP client
         ├── generate.ts      # Commit → diff → generate orchestration
-        ├── review-modal.ts  # Review UI modal
-        └── utils.ts         # ID generation, date helpers
+        ├── utils.ts         # ID generation, date helpers
+        └── components/      # React UI
+            ├── App.tsx
+            ├── Header.tsx
+            ├── Dashboard.tsx
+            ├── ReviewSession.tsx
+            ├── CardBrowser.tsx
+            ├── AboutModal.tsx
+            └── cards/
+                ├── MCQCard.tsx
+                ├── TFCard.tsx
+                ├── QACard.tsx
+                └── RatingButtons.tsx
 ```
