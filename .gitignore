@@ -3,3 +3,4 @@ vault/echo-vault/.obsidian
 **/node_modules/**
 *.egg-info/
 CLAUDE.md
+archive/
