@@ -270,11 +270,15 @@
 }
 
 .echovault-btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     background: var(--interactive-accent);
     color: white;
     border-color: var(--interactive-accent);
     width: 100%;
-    padding: 10px;
+    padding: 16px;
 }
 
 .echovault-btn-primary:hover {
@@ -285,8 +289,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     width: 100%;
-    padding: 14px;
+    padding: 16px;
     font-size: 0.95em;
 }
 
@@ -539,6 +544,107 @@
     padding: 24px 0;
     color: var(--text-muted);
     font-size: 0.9em;
+}
+
+/* Git log */
+.echovault-gitlog-status {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    padding: 24px 0;
+}
+
+.echovault-gitlog-error {
+    color: var(--text-error);
+}
+
+.echovault-gitlog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.echovault-gitlog-entry {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--background-modifier-border);
+}
+
+.echovault-gitlog-entry:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-gitlog-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.echovault-gitlog-hash {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--interactive-accent);
+    font-weight: 600;
+}
+
+.echovault-gitlog-date {
+    font-size: 0.75em;
+    color: var(--text-faint);
+}
+
+.echovault-gitlog-message {
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.echovault-gitlog-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.echovault-gitlog-files {
+    font-size: 0.75em;
+    color: var(--text-faint);
+}
+
+.echovault-gitlog-entry {
+    cursor: pointer;
+}
+
+.echovault-gitlog-entry-expanded {
+    background: var(--background-secondary);
+    border-left-color: var(--interactive-accent);
+}
+
+.echovault-gitlog-filelist {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.echovault-gitlog-file {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--text-muted);
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-gitlog-cards-badge {
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: white;
 }
 
 /* Create card form */

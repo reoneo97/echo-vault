@@ -9,8 +9,9 @@ import { Dashboard } from "./Dashboard";
 import { ReviewSession } from "./ReviewSession";
 import { CardBrowser } from "./CardBrowser";
 import { CreateCard } from "./CreateCard";
+import { GitLog } from "./GitLog";
 
-type Panel = "init" | "dashboard" | "review" | "review-all" | "browse" | "create";
+type Panel = "init" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log";
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [panel, setPanel] = useState<Panel>("dashboard");
@@ -133,6 +134,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     onAddTestCard={handleAddTestCard}
                     onBrowse={() => setPanel("browse")}
                     onCreate={() => setPanel("create")}
+                    onGitLog={() => setPanel("git-log")}
                 />
             )}
 
@@ -158,6 +160,14 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     plugin={plugin}
                     onBack={() => { refreshStats(); setPanel("dashboard"); }}
                     onReviewAll={() => setPanel("review-all")}
+                />
+            )}
+
+            {panel === "git-log" && (
+                <GitLog
+                    vaultPath={plugin.getVaultPath()}
+                    store={plugin.store}
+                    onBack={() => setPanel("dashboard")}
                 />
             )}
 

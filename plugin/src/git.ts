@@ -59,6 +59,47 @@ export async function gitCommit(
     return { hash, hasChanges: true };
 }
 
+export interface LogEntry {
+    hash: string;
+    shortHash: string;
+    date: string;
+    message: string;
+    files: string[];
+}
+
+export async function gitLog(
+    vaultPath: string,
+    count: number = 30
+): Promise<LogEntry[]> {
+    const SEP = "<<SEP>>";
+    const raw = await run(
+        "git",
+        ["log", `--max-count=${count}`, `--pretty=format:${SEP}%H${SEP}%h${SEP}%aI${SEP}%s`, "--name-only"],
+        vaultPath
+    );
+
+    const entries: LogEntry[] = [];
+    // Split on the separator that starts each commit block
+    const blocks = raw.split(SEP).filter((b) => b.trim());
+
+    // blocks come in groups of 4: hash, shortHash, date, "message\n\nfile1\nfile2..."
+    for (let i = 0; i + 3 < blocks.length; i += 4) {
+        const hash = blocks[i].trim();
+        const shortHash = blocks[i + 1].trim();
+        const date = blocks[i + 2].trim();
+        const rest = blocks[i + 3];
+
+        // First line is the message, remaining non-empty lines are filenames
+        const restLines = rest.split("\n");
+        const message = restLines[0].trim();
+        const files = restLines.slice(1).map((l) => l.trim()).filter(Boolean);
+
+        entries.push({ hash, shortHash, date, message, files });
+    }
+
+    return entries;
+}
+
 export async function gitDiff(
     vaultPath: string,
     commitHash: string
