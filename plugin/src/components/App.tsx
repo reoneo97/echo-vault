@@ -8,8 +8,9 @@ import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";
 import { ReviewSession } from "./ReviewSession";
 import { CardBrowser } from "./CardBrowser";
+import { CreateCard } from "./CreateCard";
 
-type Panel = "init" | "dashboard" | "review" | "review-all" | "browse";
+type Panel = "init" | "dashboard" | "review" | "review-all" | "browse" | "create";
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [panel, setPanel] = useState<Panel>("dashboard");
@@ -131,6 +132,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     onStartReview={handleStartReview}
                     onAddTestCard={handleAddTestCard}
                     onBrowse={() => setPanel("browse")}
+                    onCreate={() => setPanel("create")}
                 />
             )}
 
@@ -156,6 +158,14 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     plugin={plugin}
                     onBack={() => { refreshStats(); setPanel("dashboard"); }}
                     onReviewAll={() => setPanel("review-all")}
+                />
+            )}
+
+            {panel === "create" && (
+                <CreateCard
+                    store={plugin.store}
+                    onBack={() => { refreshStats(); setPanel("dashboard"); }}
+                    onCreated={() => { refreshStats(); setPanel("dashboard"); }}
                 />
             )}
         </div>

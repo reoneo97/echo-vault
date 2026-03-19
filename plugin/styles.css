@@ -315,6 +315,31 @@
     border-color: var(--color-green);
 }
 
+.echovault-dev-section {
+    margin-top: 16px;
+    padding-top: 4px;
+}
+
+.echovault-dev-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--text-faint);
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.echovault-dev-divider::before,
+.echovault-dev-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--background-modifier-border);
+}
+
 .echovault-btn-test {
     width: 100%;
     padding: 10px;
@@ -511,6 +536,99 @@
     padding: 24px 0;
     color: var(--text-muted);
     font-size: 0.9em;
+}
+
+/* Create card form */
+.echovault-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-create-type-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.echovault-create-type-btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.echovault-create-type-active {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-create-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.echovault-create-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.echovault-create-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-create-textarea {
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.5;
+}
+
+.echovault-create-choice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.echovault-create-choice-row input[type="radio"] {
+    flex-shrink: 0;
+}
+
+.echovault-create-hint {
+    font-size: 0.75em;
+    color: var(--text-faint);
+    margin: 0;
+}
+
+.echovault-create-tf-toggle {
+    display: flex;
+    gap: 6px;
+}
+
+.echovault-create-tf-btn {
+    flex: 1;
+    padding: 10px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.echovault-create-tf-active {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
 }
 
 /* About modal */

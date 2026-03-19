@@ -9,6 +9,7 @@ interface DashboardProps {
     onStartReview: () => void;
     onAddTestCard: () => Promise<void>;
     onBrowse: () => void;
+    onCreate: () => void;
 }
 
 export function Dashboard({
@@ -19,6 +20,7 @@ export function Dashboard({
     onStartReview,
     onAddTestCard,
     onBrowse,
+    onCreate,
 }: DashboardProps) {
     const [generating, setGenerating] = useState(false);
 
@@ -61,6 +63,18 @@ export function Dashboard({
                     Browse All Cards
                 </button>
 
+                <button
+                    className="echovault-btn echovault-btn-show"
+                    onClick={onCreate}
+                >
+                    Create Card
+                </button>
+            </div>
+
+            <div className="echovault-dev-section">
+                <div className="echovault-dev-divider">
+                    <span>Dev Tools</span>
+                </div>
                 <button
                     className="echovault-btn echovault-btn-test"
                     onClick={onAddTestCard}
