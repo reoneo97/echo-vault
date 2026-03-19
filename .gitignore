@@ -1,4 +1,5 @@
 vault/echo-vault/.obsidian
+vault/echo-vault/
 .claude
 **/node_modules/**
 *.egg-info/
