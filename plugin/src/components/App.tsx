@@ -15,9 +15,11 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [panel, setPanel] = useState<Panel>("dashboard");
     const [gitInitialized, setGitInitialized] = useState(false);
     const [stats, setStats] = useState({ total: 0, due: 0 });
+    const [streak, setStreak] = useState(0);
 
     const refreshStats = useCallback(() => {
         setStats(plugin.store.getStats());
+        setStreak(plugin.reviewLog.getStreak());
     }, [plugin]);
 
     useEffect(() => {
@@ -123,6 +125,8 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             {panel === "dashboard" && (
                 <Dashboard
                     stats={stats}
+                    streak={streak}
+                    reviewLog={plugin.reviewLog}
                     onCommitAndGenerate={handleCommitAndGenerate}
                     onStartReview={handleStartReview}
                     onAddTestCard={handleAddTestCard}

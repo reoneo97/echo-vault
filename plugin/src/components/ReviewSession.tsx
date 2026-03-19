@@ -70,6 +70,10 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
 
         await plugin.store.updateCard(card);
 
+        // Log the review
+        const correct = quality >= 3;
+        await plugin.reviewLog.recordReview(correct, quality);
+
         setShowingAnswer(false);
         setSelectedAnswer(null);
         setCurrentIndex((i) => i + 1);

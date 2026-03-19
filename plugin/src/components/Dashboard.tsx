@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { ReviewLog } from "../review-log";
 
 interface DashboardProps {
     stats: { total: number; due: number };
+    streak: number;
+    reviewLog: ReviewLog;
     onCommitAndGenerate: () => Promise<void>;
     onStartReview: () => void;
     onAddTestCard: () => Promise<void>;
@@ -10,6 +13,8 @@ interface DashboardProps {
 
 export function Dashboard({
     stats,
+    streak,
+    reviewLog,
     onCommitAndGenerate,
     onStartReview,
     onAddTestCard,
@@ -28,6 +33,7 @@ export function Dashboard({
             <div className="echovault-stats">
                 <StatCard label="Total cards" value={stats.total} />
                 <StatCard label="Due now" value={stats.due} />
+                <StatCard label="Streak" value={streak} icon={streak > 3 ? "\uD83D\uDD25" : undefined} />
             </div>
 
             <div className="echovault-actions">
@@ -66,11 +72,14 @@ export function Dashboard({
     );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCard({ label, value, icon }: { label: string; value: number; icon?: string }) {
     return (
         <div className="echovault-stat">
-            <div className="echovault-stat-value">{value}</div>
+            <div className="echovault-stat-value">
+                {icon && value > 0 ? `${icon} ${value}` : value}
+            </div>
             <div className="echovault-stat-label">{label}</div>
         </div>
     );
 }
+
