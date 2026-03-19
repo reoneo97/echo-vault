@@ -194,17 +194,41 @@ function InitPanel({ onInit }: { onInit: () => Promise<void> }) {
 
     return (
         <div className="echovault-init">
-            <p>
-                Your vault doesn't have a git repository yet. Initialize one to
-                start tracking changes and generating flashcards.
-            </p>
-            <button
-                className="echovault-btn echovault-btn-primary"
-                onClick={handleClick}
-                disabled={loading}
-            >
-                {loading ? "Initializing..." : "Initialize EchoVault"}
-            </button>
+            <div className="echovault-init-pitch">
+                <div className="echovault-init-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></svg>
+                    <div>
+                        <strong>Learn as you write</strong>
+                        <span>Flashcards are generated automatically from your notes — no manual effort needed.</span>
+                    </div>
+                </div>
+                <div className="echovault-init-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                    <div>
+                        <strong>Never forget what matters</strong>
+                        <span>Spaced repetition surfaces cards right when you're about to forget them.</span>
+                    </div>
+                </div>
+                <div className="echovault-init-feature">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></svg>
+                    <div>
+                        <strong>Your vault, your knowledge</strong>
+                        <span>Everything stays local — your cards live right alongside your notes.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="echovault-init-cta">
+                <p>To get started, initialize a git repository to track your changes.</p>
+                <button
+                    className="echovault-btn echovault-btn-primary"
+                    onClick={handleClick}
+                    disabled={loading}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    {loading ? "Initializing..." : "Get Started"}
+                </button>
+            </div>
         </div>
     );
 }

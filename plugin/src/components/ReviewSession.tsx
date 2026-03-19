@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type EchoVaultPlugin from "../main";
 import { Flashcard } from "../types";
 import { sm2 } from "../sm2";
@@ -6,6 +6,7 @@ import { nowISO } from "../utils";
 import { MCQCard } from "./cards/MCQCard";
 import { TFCard } from "./cards/TFCard";
 import { RatingButtons } from "./cards/RatingButtons";
+import { ReviewSummary, SessionStats } from "./ReviewSummary";
 
 interface ReviewSessionProps {
     plugin: EchoVaultPlugin;
@@ -14,11 +15,23 @@ interface ReviewSessionProps {
     onBack: () => void;
 }
 
+interface UndoSnapshot {
+    card: Flashcard;
+    index: number;
+    quality: number;
+}
+
 export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }: ReviewSessionProps) {
     const [cards, setCards] = useState<Flashcard[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showingAnswer, setShowingAnswer] = useState(false);
     const [selectedAnswer, setSelectedAnswer] = useState<number | boolean | null>(null);
+    const [lastUndo, setLastUndo] = useState<UndoSnapshot | null>(null);
+    const [sessionStats, setSessionStats] = useState<SessionStats>({
+        total: 0,
+        correct: 0,
+        ratings: [],
+    });
 
     useEffect(() => {
         setCards(reviewAll ? plugin.store.getAllCards() : plugin.store.getDueCards());
@@ -26,22 +39,48 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
 
     const card = cards[currentIndex];
 
+    // Keyboard shortcuts
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        // Ignore if typing in an input
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+        if (!showingAnswer && e.code === "Space") {
+            e.preventDefault();
+            if (card?.type === "qa") {
+                setShowingAnswer(true);
+            }
+        }
+
+        if (showingAnswer) {
+            const ratingMap: Record<string, number> = {
+                "Digit1": 0, // Again
+                "Digit2": 2, // Hard
+                "Digit3": 4, // Good
+                "Digit4": 5, // Easy
+            };
+            if (e.code in ratingMap) {
+                e.preventDefault();
+                handleRate(ratingMap[e.code]);
+            }
+        }
+    }, [showingAnswer, card]);
+
+    useEffect(() => {
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [handleKeyDown]);
+
     if (cards.length === 0) {
         return null;
     }
 
     if (currentIndex >= cards.length) {
         return (
-            <div className="echovault-complete">
-                <h2>Review complete!</h2>
-                <p>You reviewed {cards.length} card(s).</p>
-                <button
-                    className="echovault-btn echovault-btn-primary"
-                    onClick={onComplete}
-                >
-                    Back to Dashboard
-                </button>
-            </div>
+            <ReviewSummary
+                stats={sessionStats}
+                onDone={onComplete}
+            />
         );
     }
 
@@ -55,6 +94,13 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
     };
 
     const handleRate = async (quality: number) => {
+        // Save undo snapshot (deep copy before mutation)
+        const snapshot: UndoSnapshot = {
+            card: { ...card },
+            index: currentIndex,
+            quality,
+        };
+
         const result = sm2(
             quality,
             card.repetitions,
@@ -74,9 +120,40 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
         const correct = quality >= 3;
         await plugin.reviewLog.recordReview(correct, quality);
 
+        // Update session stats
+        setSessionStats((prev) => ({
+            total: prev.total + 1,
+            correct: prev.correct + (correct ? 1 : 0),
+            ratings: [...prev.ratings, quality],
+        }));
+
+        setLastUndo(snapshot);
         setShowingAnswer(false);
         setSelectedAnswer(null);
         setCurrentIndex((i) => i + 1);
+    };
+
+    const handleUndo = async () => {
+        if (!lastUndo) return;
+
+        // Restore the card to its previous state
+        await plugin.store.updateCard(lastUndo.card);
+
+        // Roll back session stats
+        const wasCorrect = lastUndo.quality >= 3;
+        setSessionStats((prev) => ({
+            total: prev.total - 1,
+            correct: prev.correct - (wasCorrect ? 1 : 0),
+            ratings: prev.ratings.slice(0, -1),
+        }));
+
+        setCurrentIndex(lastUndo.index);
+        setShowingAnswer(false);
+        setSelectedAnswer(null);
+        setLastUndo(null);
+
+        // Refresh cards array so the restored card is up to date
+        setCards(reviewAll ? plugin.store.getAllCards() : plugin.store.getDueCards());
     };
 
     const cardType = card.type ?? "qa";
@@ -87,6 +164,8 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
               ? "True / False"
               : "Q & A";
 
+    const progress = (currentIndex / cards.length) * 100;
+
     return (
         <>
             <div className="echovault-review-header">
@@ -96,16 +175,36 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
                 >
                     Back
                 </button>
-                <span className="echovault-progress">
-                    {currentIndex + 1} / {cards.length}
-                </span>
+                <div className="echovault-review-header-right">
+                    {lastUndo && (
+                        <button
+                            className="echovault-btn echovault-btn-undo"
+                            onClick={handleUndo}
+                            title="Undo last rating"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                        </button>
+                    )}
+                    <span className="echovault-progress">
+                        {currentIndex + 1} / {cards.length}
+                    </span>
+                </div>
+            </div>
+
+            <div className="echovault-progress-bar">
+                <div
+                    className="echovault-progress-bar-fill"
+                    style={{ width: `${progress}%` }}
+                />
             </div>
 
             <div className={`echovault-card-type echovault-card-type-${cardType}`}>
                 {typeLabel}
             </div>
 
-            <div className="echovault-question">{card.question}</div>
+            <div className={`echovault-card-flip ${showingAnswer ? "echovault-card-flip-revealed" : ""}`}>
+                <div className="echovault-question">{card.question}</div>
+            </div>
 
             {card.type === "mcq" && (
                 <MCQCard
@@ -129,11 +228,12 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
                     onClick={handleShowAnswer}
                 >
                     Show Answer
+                    <span className="echovault-shortcut-hint">space</span>
                 </button>
             )}
 
             {showingAnswer && (
-                <>
+                <div className="echovault-answer-reveal">
                     {(() => {
                         const isQA = cardType === "qa";
                         const isCorrect = isQA ? null
@@ -157,7 +257,7 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
                         );
                     })()}
                     <RatingButtons onRate={handleRate} />
-                </>
+                </div>
             )}
         </>
     );
