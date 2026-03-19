@@ -6,7 +6,7 @@ export interface BaseFlashcard {
     question: string;
     answer: string;
     sourceNotePath: string;
-    commitHash: string;
+    commitHash: string | null;
     createdAt: string;
     lastReviewedAt: string | null;
     repetitions: number;

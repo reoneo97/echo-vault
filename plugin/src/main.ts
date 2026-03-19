@@ -2,6 +2,7 @@ import { Notice, Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, EchoVaultSettings } from "./types";
 import { EchoVaultSettingTab } from "./settings";
 import { FlashcardStore } from "./store";
+import { ReviewLog } from "./review-log";
 import { checkBackendHealth } from "./api-client";
 import { commitAndGenerate } from "./generate";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
@@ -9,6 +10,7 @@ import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 export default class EchoVaultPlugin extends Plugin {
     settings: EchoVaultSettings = DEFAULT_SETTINGS;
     store!: FlashcardStore;
+    reviewLog!: ReviewLog;
     private statusBarEl: HTMLElement | null = null;
 
     async onload() {
@@ -16,6 +18,9 @@ export default class EchoVaultPlugin extends Plugin {
 
         this.store = new FlashcardStore(this.app.vault, this.settings);
         await this.store.load();
+
+        this.reviewLog = new ReviewLog(this.app.vault, this.settings);
+        await this.reviewLog.load();
 
         // Settings tab
         this.addSettingTab(new EchoVaultSettingTab(this.app, this));
