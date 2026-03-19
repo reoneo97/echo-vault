@@ -1,16 +1,17 @@
-import { useState } from "react";
-import { Notice } from "obsidian";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { App, Notice, TFile, MarkdownView } from "obsidian";
 import { CardType, Flashcard } from "../types";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import type { FlashcardStore } from "../store";
 
 interface CreateCardProps {
     store: FlashcardStore;
+    app: App;
     onBack: () => void;
     onCreated: () => void;
 }
 
-export function CreateCard({ store, onBack, onCreated }: CreateCardProps) {
+export function CreateCard({ store, app, onBack, onCreated }: CreateCardProps) {
     const [cardType, setCardType] = useState<CardType>("qa");
     const [question, setQuestion] = useState("");
     const [answer, setAnswer] = useState("");
@@ -21,6 +22,61 @@ export function CreateCard({ store, onBack, onCreated }: CreateCardProps) {
 
     // TF state
     const [correctValue, setCorrectValue] = useState(true);
+
+    // Linked note state
+    const [linkedNote, setLinkedNote] = useState<string | null>(null);
+    const [noteSearch, setNoteSearch] = useState("");
+    const [notePickerOpen, setNotePickerOpen] = useState(false);
+    const notePickerRef = useRef<HTMLDivElement>(null);
+
+    const activeFilePath = app.workspace.getActiveFile()?.path ?? null;
+
+    const openNotePaths = useMemo(() => {
+        const paths = new Set<string>();
+        for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+            const file = (leaf.view as MarkdownView).file;
+            if (file) paths.add(file.path);
+        }
+        return [...paths];
+    }, [app.workspace]);
+
+    const markdownFiles = useMemo(
+        () => app.vault.getFiles()
+            .filter((f): f is TFile => f instanceof TFile && f.extension === "md")
+            .map((f) => f.path)
+            .sort(),
+        [app.vault]
+    );
+
+    const { filteredOpen, filteredVault, totalVaultMatches } = useMemo(() => {
+        const q = noteSearch.trim().toLowerCase();
+        const openSet = new Set(openNotePaths);
+
+        const matchedOpen = q
+            ? openNotePaths.filter((p) => p.toLowerCase().includes(q))
+            : openNotePaths;
+
+        const vaultMatches = (q
+            ? markdownFiles.filter((p) => p.toLowerCase().includes(q))
+            : markdownFiles
+        ).filter((p) => !openSet.has(p));
+
+        return {
+            filteredOpen: matchedOpen,
+            filteredVault: vaultMatches.slice(0, 20),
+            totalVaultMatches: vaultMatches.length,
+        };
+    }, [noteSearch, openNotePaths, markdownFiles]);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            if (notePickerRef.current && !notePickerRef.current.contains(e.target as Node)) {
+                setNotePickerOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
 
     const [saving, setSaving] = useState(false);
 
@@ -38,7 +94,7 @@ export function CreateCard({ store, onBack, onCreated }: CreateCardProps) {
             id: generateId(),
             question: question.trim(),
             answer: answer.trim(),
-            sourceNotePath: "manual",
+            sourceNotePath: linkedNote ?? "manual",
             commitHash: null,
             createdAt: nowISO(),
             lastReviewedAt: null,
@@ -153,6 +209,81 @@ export function CreateCard({ store, onBack, onCreated }: CreateCardProps) {
                     onChange={(e) => setAnswer(e.target.value)}
                     rows={3}
                 />
+
+                <label className="echovault-create-label">Related Note (optional)</label>
+                <div className="echovault-note-picker" ref={notePickerRef}>
+                    {linkedNote ? (
+                        <div className="echovault-note-picker-selected">
+                            <span className="echovault-note-picker-path">{linkedNote}</span>
+                            <button
+                                className="echovault-note-picker-clear"
+                                onClick={() => { setLinkedNote(null); setNoteSearch(""); }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+                    ) : (
+                        <input
+                            className="echovault-create-input"
+                            placeholder="Search for a note..."
+                            value={noteSearch}
+                            onChange={(e) => { setNoteSearch(e.target.value); setNotePickerOpen(true); }}
+                            onFocus={() => setNotePickerOpen(true)}
+                        />
+                    )}
+                    {notePickerOpen && !linkedNote && (
+                        <div className="echovault-note-picker-dropdown">
+                            {filteredOpen.length === 0 && filteredVault.length === 0 ? (
+                                <div className="echovault-note-picker-empty">No notes found</div>
+                            ) : (
+                                <>
+                                    {filteredOpen.length > 0 && (
+                                        <>
+                                            <div className="echovault-note-picker-section">Open Notes</div>
+                                            {filteredOpen.map((path) => (
+                                                <button
+                                                    key={path}
+                                                    className={`echovault-note-picker-item ${path === activeFilePath ? "echovault-note-picker-active" : ""}`}
+                                                    onClick={() => {
+                                                        setLinkedNote(path);
+                                                        setNoteSearch("");
+                                                        setNotePickerOpen(false);
+                                                    }}
+                                                >
+                                                    {path}
+                                                    {path === activeFilePath && <span className="echovault-note-picker-badge">active</span>}
+                                                </button>
+                                            ))}
+                                        </>
+                                    )}
+                                    {filteredVault.length > 0 && (
+                                        <>
+                                            <div className="echovault-note-picker-section">All Notes</div>
+                                            {filteredVault.map((path) => (
+                                                <button
+                                                    key={path}
+                                                    className="echovault-note-picker-item"
+                                                    onClick={() => {
+                                                        setLinkedNote(path);
+                                                        setNoteSearch("");
+                                                        setNotePickerOpen(false);
+                                                    }}
+                                                >
+                                                    {path}
+                                                </button>
+                                            ))}
+                                            {totalVaultMatches > 20 && (
+                                                <div className="echovault-note-picker-more">
+                                                    {totalVaultMatches - 20} more — keep typing to narrow results
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
 
                 <button
                     className="echovault-btn echovault-btn-primary"

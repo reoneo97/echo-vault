@@ -101,6 +101,9 @@
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
+    max-width: max(240px, 25vw);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Review header */
@@ -629,6 +632,125 @@
     background: var(--interactive-accent);
     color: white;
     border-color: var(--interactive-accent);
+}
+
+/* Note picker */
+.echovault-note-picker {
+    position: relative;
+}
+
+.echovault-note-picker-selected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: 1px solid var(--interactive-accent);
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.echovault-note-picker-path {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-note-picker-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.echovault-note-picker-clear:hover {
+    color: var(--text-error);
+}
+
+.echovault-note-picker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--background-primary);
+    border: 2px solid var(--interactive-accent);
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.echovault-note-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.85em;
+    background: none;
+    border: none;
+    color: var(--text-normal);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-note-picker-item:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-note-picker-section {
+    padding: 6px 12px 4px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-note-picker-section:first-child {
+    border-top: none;
+}
+
+.echovault-note-picker-active {
+    color: var(--interactive-accent) !important;
+}
+
+.echovault-note-picker-badge {
+    margin-left: auto;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: white;
+    flex-shrink: 0;
+}
+
+.echovault-note-picker-more {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    color: var(--text-faint);
+    text-align: center;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-note-picker-empty {
+    padding: 12px;
+    text-align: center;
+    font-size: 0.85em;
+    color: var(--text-faint);
 }
 
 /* About modal */

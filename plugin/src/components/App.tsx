@@ -164,6 +164,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             {panel === "create" && (
                 <CreateCard
                     store={plugin.store}
+                    app={plugin.app}
                     onBack={() => { refreshStats(); setPanel("dashboard"); }}
                     onCreated={() => { refreshStats(); setPanel("dashboard"); }}
                 />
