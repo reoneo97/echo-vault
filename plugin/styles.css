@@ -59,13 +59,54 @@
 
 /* Init */
 .echovault-init {
-    text-align: center;
-    padding: 24px 0;
+    padding: 16px 0;
 }
 
-.echovault-init p {
+.echovault-init-pitch {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.echovault-init-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.echovault-init-feature svg {
+    flex-shrink: 0;
+    color: var(--interactive-accent);
+    margin-top: 2px;
+}
+
+.echovault-init-feature div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.echovault-init-feature strong {
+    font-size: 0.95em;
+}
+
+.echovault-init-feature span {
+    font-size: 0.85em;
     color: var(--text-muted);
-    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+.echovault-init-cta {
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-init-cta p {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    margin-bottom: 14px;
     line-height: 1.5;
 }
 
@@ -111,7 +152,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+}
+
+.echovault-review-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .echovault-btn-back {
@@ -119,8 +166,82 @@
     font-size: 0.85em;
 }
 
+.echovault-btn-undo {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 0.8em;
+    color: var(--text-muted);
+    border-color: var(--background-modifier-border);
+}
+
+.echovault-btn-undo:hover {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
 .echovault-progress {
     font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+/* Progress bar */
+.echovault-progress-bar {
+    height: 4px;
+    background: var(--background-secondary);
+    border-radius: 2px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.echovault-progress-bar-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Card flip animation */
+.echovault-card-flip {
+    transition: transform 0.2s ease;
+}
+
+.echovault-card-flip-revealed {
+    transform: scale(1);
+}
+
+/* Answer reveal animation */
+.echovault-answer-reveal {
+    animation: echovault-slide-up 0.25s ease-out;
+}
+
+@keyframes echovault-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Keyboard shortcut hints */
+.echovault-shortcut-hint {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    margin-left: 6px;
+    opacity: 0.7;
+    vertical-align: middle;
+}
+
+.echovault-btn-show .echovault-shortcut-hint {
+    background: var(--background-modifier-border);
     color: var(--text-muted);
 }
 
@@ -295,31 +416,34 @@
     font-size: 0.95em;
 }
 
-.echovault-btn-again {
+.echovault-btn-again,
+.echovault-btn-hard,
+.echovault-btn-good,
+.echovault-btn-easy {
     flex: 1;
-    background: var(--text-error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: white;
+}
+
+.echovault-btn-again {
+    background: var(--text-error);
     border-color: var(--text-error);
 }
 
 .echovault-btn-hard {
-    flex: 1;
     background: var(--color-orange);
-    color: white;
     border-color: var(--color-orange);
 }
 
 .echovault-btn-good {
-    flex: 1;
     background: var(--interactive-accent);
-    color: white;
     border-color: var(--interactive-accent);
 }
 
 .echovault-btn-easy {
-    flex: 1;
     background: var(--color-green);
-    color: white;
     border-color: var(--color-green);
 }
 
@@ -359,19 +483,122 @@
     opacity: 1;
 }
 
-/* Complete screen */
-.echovault-complete {
+/* Review summary */
+.echovault-summary {
     text-align: center;
-    padding: 24px 0;
+    padding: 16px 0;
 }
 
-.echovault-complete h2 {
+.echovault-summary-emoji {
+    font-size: 2.5em;
     margin-bottom: 8px;
 }
 
-.echovault-complete p {
+.echovault-summary-title {
+    margin: 0 0 4px 0;
+}
+
+.echovault-summary-subtitle {
     color: var(--text-muted);
+    margin: 0 0 20px 0;
+    font-size: 0.9em;
+}
+
+.echovault-summary-stats {
+    display: flex;
+    gap: 12px;
     margin-bottom: 20px;
+}
+
+.echovault-summary-stat {
+    flex: 1;
+    padding: 12px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-summary-stat-value {
+    font-size: 1.4em;
+    font-weight: 700;
+}
+
+.echovault-summary-stat-label {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.echovault-summary-breakdown {
+    text-align: left;
+    margin-bottom: 20px;
+    padding: 14px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-summary-breakdown-title {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+}
+
+.echovault-summary-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-summary-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.echovault-summary-bar-label {
+    font-size: 0.8em;
+    width: 44px;
+    flex-shrink: 0;
+}
+
+.echovault-summary-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--background-primary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.echovault-summary-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.echovault-summary-bar-again {
+    background: var(--text-error);
+}
+
+.echovault-summary-bar-hard {
+    background: var(--color-orange);
+}
+
+.echovault-summary-bar-good {
+    background: var(--interactive-accent);
+}
+
+.echovault-summary-bar-easy {
+    background: var(--color-green);
+}
+
+.echovault-summary-bar-count {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
 }
 
 /* Card browser */
