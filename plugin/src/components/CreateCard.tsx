@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { App, Notice, TFile, MarkdownView } from "obsidian";
+import { App, TFile, MarkdownView } from "obsidian";
 import { CardType, Flashcard } from "../types";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import type { FlashcardStore } from "../store";
@@ -115,7 +115,6 @@ export function CreateCard({ store, app, onBack, onCreated }: CreateCardProps) {
 
         await store.addCards([card]);
         setSaving(false);
-        new Notice("Flashcard created!");
         onCreated();
     };
 

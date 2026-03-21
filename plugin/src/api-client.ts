@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { EchoVaultSettings, GenerateResponse } from "./types";
+import { EchoVaultSettings, GenerateResponse, ImageAttachment } from "./types";
 
 export async function checkBackendHealth(
     settings: EchoVaultSettings
@@ -18,7 +18,8 @@ export async function checkBackendHealth(
 export async function generateFlashcards(
     diffContent: string,
     sourceNote: string,
-    settings: EchoVaultSettings
+    settings: EchoVaultSettings,
+    images: ImageAttachment[] = []
 ): Promise<GenerateResponse> {
     const res = await requestUrl({
         url: `${settings.backendUrl}/generate-flashcards`,
@@ -28,6 +29,7 @@ export async function generateFlashcards(
             diff_content: diffContent,
             source_note: sourceNote,
             max_cards: settings.maxCardsPerGeneration,
+            images: images.length > 0 ? images : undefined,
         }),
     });
     return res.json as GenerateResponse;

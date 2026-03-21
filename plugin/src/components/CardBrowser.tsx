@@ -3,6 +3,7 @@ import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
 import { getTodayDateString } from "../utils";
+import { EmptyState } from "./EmptyState";
 
 type SortField = "created" | "nextReview" | "easiness";
 type TypeFilter = "all" | CardType;
@@ -57,6 +58,17 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
     };
 
     const today = getTodayDateString();
+
+    if (cards.length === 0) {
+        return (
+            <EmptyState
+                icon={<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></svg>}
+                title="No cards yet"
+                description="Generate flashcards from your notes or create some manually to get started."
+                action={{ label: "Back to Dashboard", onClick: onBack }}
+            />
+        );
+    }
 
     return (
         <>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
@@ -10,18 +10,44 @@ import { ReviewSession } from "./ReviewSession";
 import { CardBrowser } from "./CardBrowser";
 import { CreateCard } from "./CreateCard";
 import { GitLog } from "./GitLog";
+import { Tutorial } from "./Tutorial";
+import { EmptyState } from "./EmptyState";
 
-type Panel = "init" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log";
+type Panel = "init" | "tutorial" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log";
+
+const PANEL_LABELS: Record<Panel, string> = {
+    init: "Setup",
+    tutorial: "Tutorial",
+    dashboard: "Dashboard",
+    review: "Review",
+    "review-all": "Review All",
+    browse: "Browse",
+    create: "Create",
+    "git-log": "Git Log",
+};
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [panel, setPanel] = useState<Panel>("dashboard");
+    const [prevPanel, setPrevPanel] = useState<Panel | null>(null);
+    const [animating, setAnimating] = useState(false);
     const [gitInitialized, setGitInitialized] = useState(false);
     const [stats, setStats] = useState({ total: 0, due: 0 });
     const [streak, setStreak] = useState(0);
+    const [forecast, setForecast] = useState({ tomorrow: 0, thisWeek: 0 });
+    const panelRef = useRef<HTMLDivElement>(null);
+
+    const navigateTo = useCallback((next: Panel) => {
+        setPrevPanel(panel);
+        setAnimating(true);
+        setPanel(next);
+        // Clear animation class after transition
+        setTimeout(() => setAnimating(false), 200);
+    }, [panel]);
 
     const refreshStats = useCallback(() => {
         setStats(plugin.store.getStats());
         setStreak(plugin.reviewLog.getStreak());
+        setForecast(plugin.store.getForecast());
     }, [plugin]);
 
     useEffect(() => {
@@ -30,7 +56,11 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             const hasRepo = await isOwnGitRepo(vaultPath);
             setGitInitialized(hasRepo);
             if (hasRepo) {
-                setPanel("dashboard");
+                if (!plugin.settings.hasSeenTutorial) {
+                    setPanel("tutorial");
+                } else {
+                    setPanel("dashboard");
+                }
             } else {
                 setPanel("init");
             }
@@ -39,16 +69,26 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         refreshStats();
     }, [plugin, refreshStats]);
 
+    const handleTutorialComplete = async () => {
+        plugin.settings.hasSeenTutorial = true;
+        await plugin.saveSettings();
+        navigateTo("dashboard");
+    };
+
     const handleGitInit = async () => {
         try {
             const vaultPath = plugin.getVaultPath();
             await gitInit(vaultPath);
             setGitInitialized(true);
-            setPanel("dashboard");
-            new Notice("Git repository initialized!");
+            new Notice("Git repository initialized — you're all set!");
+            if (!plugin.settings.hasSeenTutorial) {
+                navigateTo("tutorial");
+            } else {
+                navigateTo("dashboard");
+            }
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
-            new Notice(`Failed to initialize: ${msg}`);
+            new Notice(`Failed to initialize git: ${msg}`);
         }
     };
 
@@ -104,81 +144,132 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         await plugin.store.addCards([card]);
         refreshStats();
         const label = cardType === "mcq" ? "Multiple Choice" : cardType === "tf" ? "True/False" : "Q&A";
-        new Notice(`Test ${label} flashcard added!`);
+        new Notice(`Added ${label} card — ${stats.total + 1} cards total`);
     };
 
     const handleStartReview = () => {
-        setPanel("review");
+        if (stats.due === 0) {
+            new Notice("No cards due for review right now");
+            return;
+        }
+        navigateTo("review");
     };
 
     const handleReviewComplete = () => {
         refreshStats();
-        setPanel("dashboard");
+        navigateTo("dashboard");
     };
+
+    // Breadcrumb: show parent > current for non-dashboard panels
+    const showBreadcrumb = panel !== "dashboard" && panel !== "init" && panel !== "tutorial";
+    const breadcrumbParent = panel === "review-all" ? "Browse" : "Dashboard";
+    const breadcrumbParentPanel: Panel = panel === "review-all" ? "browse" : "dashboard";
 
     return (
         <div className="echovault-sidebar">
-            <Header gitInitialized={gitInitialized} app={plugin.app} showInfo={panel === "dashboard" || panel === "init"} />
+            <Header
+                gitInitialized={gitInitialized}
+                app={plugin.app}
+                showInfo={panel === "dashboard" || panel === "init"}
+                showTutorialLink={panel === "dashboard" && plugin.settings.hasSeenTutorial}
+                onTutorial={() => navigateTo("tutorial")}
+            />
 
-            {panel === "init" && (
-                <InitPanel onInit={handleGitInit} />
+            {showBreadcrumb && (
+                <div className="echovault-breadcrumb">
+                    <button
+                        className="echovault-breadcrumb-link"
+                        onClick={() => { refreshStats(); navigateTo(breadcrumbParentPanel); }}
+                    >
+                        {breadcrumbParent}
+                    </button>
+                    <span className="echovault-breadcrumb-sep">/</span>
+                    <span className="echovault-breadcrumb-current">{PANEL_LABELS[panel]}</span>
+                </div>
             )}
 
-            {panel === "dashboard" && (
-                <Dashboard
-                    stats={stats}
-                    streak={streak}
-                    reviewLog={plugin.reviewLog}
-                    onCommitAndGenerate={handleCommitAndGenerate}
-                    onStartReview={handleStartReview}
-                    onAddTestCard={handleAddTestCard}
-                    onBrowse={() => setPanel("browse")}
-                    onCreate={() => setPanel("create")}
-                    onGitLog={() => setPanel("git-log")}
-                />
-            )}
+            <div
+                ref={panelRef}
+                className={`echovault-panel ${animating ? "echovault-panel-enter" : ""}`}
+            >
+                {panel === "init" && (
+                    <InitPanel onInit={handleGitInit} />
+                )}
 
-            {panel === "review" && (
-                <ReviewSession
-                    plugin={plugin}
-                    onComplete={handleReviewComplete}
-                    onBack={() => { refreshStats(); setPanel("dashboard"); }}
-                />
-            )}
+                {panel === "tutorial" && (
+                    <Tutorial onComplete={handleTutorialComplete} />
+                )}
 
-            {panel === "review-all" && (
-                <ReviewSession
-                    plugin={plugin}
-                    reviewAll
-                    onComplete={handleReviewComplete}
-                    onBack={() => { refreshStats(); setPanel("browse"); }}
-                />
-            )}
+                {panel === "dashboard" && (
+                    <Dashboard
+                        stats={stats}
+                        streak={streak}
+                        forecast={forecast}
+                        reviewLog={plugin.reviewLog}
+                        onCommitAndGenerate={handleCommitAndGenerate}
+                        onStartReview={handleStartReview}
+                        onAddTestCard={handleAddTestCard}
+                        onBrowse={() => navigateTo("browse")}
+                        onCreate={() => navigateTo("create")}
+                        onGitLog={() => navigateTo("git-log")}
+                    />
+                )}
 
-            {panel === "browse" && (
-                <CardBrowser
-                    plugin={plugin}
-                    onBack={() => { refreshStats(); setPanel("dashboard"); }}
-                    onReviewAll={() => setPanel("review-all")}
-                />
-            )}
+                {panel === "review" && (
+                    stats.due === 0 ? (
+                        <EmptyState
+                            icon={<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>}
+                            title="All caught up!"
+                            description="No cards are due for review right now. Come back later or create new cards."
+                            action={{ label: "Back to Dashboard", onClick: () => navigateTo("dashboard") }}
+                        />
+                    ) : (
+                        <ReviewSession
+                            plugin={plugin}
+                            onComplete={handleReviewComplete}
+                            onBack={() => { refreshStats(); navigateTo("dashboard"); }}
+                        />
+                    )
+                )}
 
-            {panel === "git-log" && (
-                <GitLog
-                    vaultPath={plugin.getVaultPath()}
-                    store={plugin.store}
-                    onBack={() => setPanel("dashboard")}
-                />
-            )}
+                {panel === "review-all" && (
+                    <ReviewSession
+                        plugin={plugin}
+                        reviewAll
+                        onComplete={handleReviewComplete}
+                        onBack={() => { refreshStats(); navigateTo("browse"); }}
+                    />
+                )}
 
-            {panel === "create" && (
-                <CreateCard
-                    store={plugin.store}
-                    app={plugin.app}
-                    onBack={() => { refreshStats(); setPanel("dashboard"); }}
-                    onCreated={() => { refreshStats(); setPanel("dashboard"); }}
-                />
-            )}
+                {panel === "browse" && (
+                    <CardBrowser
+                        plugin={plugin}
+                        onBack={() => { refreshStats(); navigateTo("dashboard"); }}
+                        onReviewAll={() => navigateTo("review-all")}
+                    />
+                )}
+
+                {panel === "git-log" && (
+                    <GitLog
+                        vaultPath={plugin.getVaultPath()}
+                        store={plugin.store}
+                        onBack={() => navigateTo("dashboard")}
+                    />
+                )}
+
+                {panel === "create" && (
+                    <CreateCard
+                        store={plugin.store}
+                        app={plugin.app}
+                        onBack={() => { refreshStats(); navigateTo("dashboard"); }}
+                        onCreated={() => {
+                            refreshStats();
+                            navigateTo("dashboard");
+                            new Notice(`Card created — ${stats.total + 1} cards in your collection`);
+                        }}
+                    />
+                )}
+            </div>
         </div>
     );
 }
