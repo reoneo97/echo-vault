@@ -7,6 +7,7 @@ import { MCQCard } from "./cards/MCQCard";
 import { TFCard } from "./cards/TFCard";
 import { RatingButtons } from "./cards/RatingButtons";
 import { ReviewSummary, SessionStats } from "./ReviewSummary";
+import { MarkdownText } from "./MarkdownText";
 
 interface ReviewSessionProps {
     plugin: EchoVaultPlugin;
@@ -203,7 +204,7 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
             </div>
 
             <div className={`echovault-card-flip ${showingAnswer ? "echovault-card-flip-revealed" : ""}`}>
-                <div className="echovault-question">{card.question}</div>
+                <MarkdownText app={plugin.app} markdown={card.question} sourcePath={card.sourceNotePath !== "manual" ? card.sourceNotePath : undefined} className="echovault-question echovault-md" />
             </div>
 
             {card.type === "mcq" && (
@@ -252,7 +253,7 @@ export function ReviewSession({ plugin, reviewAll = false, onComplete, onBack }:
                                         {isCorrect ? "\u2705 Great job! That's correct" : "\u274C Not quite"}
                                     </div>
                                 )}
-                                {card.answer}
+                                <MarkdownText app={plugin.app} markdown={card.answer} sourcePath={card.sourceNotePath !== "manual" ? card.sourceNotePath : undefined} className="echovault-md" />
                             </div>
                         );
                     })()}

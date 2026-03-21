@@ -1,12 +1,109 @@
-import { Notice } from "obsidian";
+import { Notice, Vault, TFile } from "obsidian";
 import { gitCommit, gitDiff, isOwnGitRepo, gitInit } from "./git";
 import { generateFlashcards } from "./api-client";
 import { FlashcardStore } from "./store";
-import { EchoVaultSettings, Flashcard } from "./types";
+import { EchoVaultSettings, Flashcard, ImageAttachment } from "./types";
 import { generateId, nowISO, getTodayDateString } from "./utils";
+
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "bmp", "webp"]);
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+const MEDIA_TYPES: Record<string, string> = {
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    gif: "image/gif",
+    bmp: "image/bmp",
+    webp: "image/webp",
+};
+
+function extractImageRefs(text: string): string[] {
+    const refs = new Set<string>();
+
+    // Obsidian wikilinks: ![[image.png]] or ![[folder/image.png]]
+    // Also handles aliases like ![[image.png|caption]]
+    const wikiRegex = /!\[\[([^\]|]+\.(?:png|jpg|jpeg|gif|bmp|webp))(?:\|[^\]]*)?\]\]/gi;
+    for (const match of text.matchAll(wikiRegex)) {
+        refs.add(match[1].trim());
+    }
+
+    // Markdown links: ![alt](image.png) or ![alt](folder/image.png)
+    const mdRegex = /!\[[^\]]*\]\(([^)]+\.(?:png|jpg|jpeg|gif|bmp|webp))\)/gi;
+    for (const match of text.matchAll(mdRegex)) {
+        refs.add(match[1].trim());
+    }
+
+    return [...refs];
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+    const bytes = new Uint8Array(buffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+async function resolveImages(
+    refs: string[],
+    vault: Vault
+): Promise<ImageAttachment[]> {
+    const attachments: ImageAttachment[] = [];
+
+    // Build a name→path lookup for wikilink resolution (basename only)
+    const filesByName = new Map<string, TFile>();
+    for (const file of vault.getFiles()) {
+        if (file instanceof TFile && IMAGE_EXTENSIONS.has(file.extension.toLowerCase())) {
+            // First match wins (matches Obsidian's resolution behavior)
+            if (!filesByName.has(file.name)) {
+                filesByName.set(file.name, file);
+            }
+        }
+    }
+
+    for (const ref of refs.slice(0, MAX_IMAGES)) {
+        try {
+            let filePath: string | null = null;
+
+            // Try direct path first
+            if (await vault.adapter.exists(ref)) {
+                filePath = ref;
+            } else {
+                // Search by basename (for wikilinks like ![[photo.png]])
+                const basename = ref.split("/").pop() ?? ref;
+                const found = filesByName.get(basename);
+                if (found) {
+                    filePath = found.path;
+                }
+            }
+
+            if (!filePath) continue;
+
+            // Check file size before reading
+            const stat = await vault.adapter.stat(filePath);
+            if (!stat || stat.size > MAX_IMAGE_SIZE) continue;
+
+            const data = await vault.adapter.readBinary(filePath);
+            const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+
+            attachments.push({
+                filename: filePath,
+                data: arrayBufferToBase64(data),
+                media_type: MEDIA_TYPES[ext] ?? "application/octet-stream",
+            });
+        } catch {
+            // Skip images that can't be read
+        }
+    }
+
+    return attachments;
+}
 
 export async function commitAndGenerate(
     vaultPath: string,
+    vault: Vault,
     store: FlashcardStore,
     settings: EchoVaultSettings
 ): Promise<void> {
@@ -51,13 +148,24 @@ export async function commitAndGenerate(
         return;
     }
 
+    // Detect and resolve image references in the diff
+    const imageRefs = extractImageRefs(diffText);
+    let images: ImageAttachment[] = [];
+    if (imageRefs.length > 0) {
+        images = await resolveImages(imageRefs, vault);
+    }
+
     // Call backend
-    new Notice("Generating flashcards...");
+    new Notice(
+        images.length > 0
+            ? `Generating flashcards (${images.length} image${images.length > 1 ? "s" : ""} detected)...`
+            : "Generating flashcards..."
+    );
     const sourceNote = changedFiles.length > 0 ? changedFiles[0] : "unknown";
 
     let response;
     try {
-        response = await generateFlashcards(diffText, sourceNote, settings);
+        response = await generateFlashcards(diffText, sourceNote, settings, images);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         new Notice(`Failed to generate flashcards: ${msg}`);

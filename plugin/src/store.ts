@@ -89,4 +89,27 @@ export class FlashcardStore {
             due: this.getDueCards().length,
         };
     }
+
+    getForecast(): { tomorrow: number; thisWeek: number } {
+        const todayStr = getTodayDateString();
+
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split("T")[0];
+
+        const weekEnd = new Date();
+        weekEnd.setDate(weekEnd.getDate() + 7);
+        const weekEndStr = weekEnd.toISOString().split("T")[0];
+
+        let tomorrowCount = 0;
+        let thisWeekCount = 0;
+
+        for (const card of this.data.cards) {
+            if (card.nextReviewDate <= todayStr) continue;
+            if (card.nextReviewDate === tomorrowStr) tomorrowCount++;
+            if (card.nextReviewDate <= weekEndStr) thisWeekCount++;
+        }
+
+        return { tomorrow: tomorrowCount, thisWeek: thisWeekCount };
+    }
 }

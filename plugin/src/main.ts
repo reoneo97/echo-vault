@@ -88,7 +88,7 @@ export default class EchoVaultPlugin extends Plugin {
     async commitAndGenerate() {
         try {
             const vaultPath = this.getVaultPath();
-            await commitAndGenerate(vaultPath, this.store, this.settings);
+            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings);
             this.updateStatusBar();
             this.refreshSidebar();
         } catch (e: unknown) {

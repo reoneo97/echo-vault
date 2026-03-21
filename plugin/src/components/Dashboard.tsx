@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { ReviewLog } from "../review-log";
+import { ReviewHeatmap } from "./ReviewHeatmap";
 
 interface DashboardProps {
     stats: { total: number; due: number };
     streak: number;
+    forecast: { tomorrow: number; thisWeek: number };
     reviewLog: ReviewLog;
     onCommitAndGenerate: () => Promise<void>;
     onStartReview: () => void;
@@ -16,6 +18,7 @@ interface DashboardProps {
 export function Dashboard({
     stats,
     streak,
+    forecast,
     reviewLog,
     onCommitAndGenerate,
     onStartReview,
@@ -39,6 +42,23 @@ export function Dashboard({
                 <StatCard label="Due now" value={stats.due} />
                 <StatCard label="Streak" value={streak} icon={streak > 3 ? "\uD83D\uDD25" : undefined} />
             </div>
+
+            {(forecast.tomorrow > 0 || forecast.thisWeek > 0) && (
+                <div className="echovault-forecast">
+                    {forecast.tomorrow > 0 && (
+                        <span className="echovault-forecast-item">
+                            <strong>{forecast.tomorrow}</strong> due tomorrow
+                        </span>
+                    )}
+                    {forecast.thisWeek > 0 && (
+                        <span className="echovault-forecast-item">
+                            <strong>{forecast.thisWeek}</strong> due this week
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <ReviewHeatmap reviewLog={reviewLog} />
 
             <div className="echovault-actions">
                 <button

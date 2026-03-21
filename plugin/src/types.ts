@@ -42,6 +42,7 @@ export interface EchoVaultSettings {
     flashcardFolderPath: string;
     dataFileName: string;
     maxCardsPerGeneration: number;
+    hasSeenTutorial: boolean;
 }
 
 export const DEFAULT_SETTINGS: EchoVaultSettings = {
@@ -49,7 +50,14 @@ export const DEFAULT_SETTINGS: EchoVaultSettings = {
     flashcardFolderPath: "EchoVault",
     dataFileName: "flashcards.json",
     maxCardsPerGeneration: 10,
+    hasSeenTutorial: false,
 };
+
+export interface ImageAttachment {
+    filename: string;
+    data: string; // base64
+    media_type: string;
+}
 
 export interface GenerateResponse {
     cards: { question: string; answer: string }[];
