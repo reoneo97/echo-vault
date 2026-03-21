@@ -20,5 +20,6 @@ async def generate_flashcards(req: GenerateRequest):
         diff_content=req.diff_content,
         source_note=req.source_note,
         max_cards=req.max_cards,
+        images=req.images if req.images else None,
     )
     return GenerateResponse(cards=cards)
