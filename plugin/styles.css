@@ -233,19 +233,19 @@
 
 /* Review heatmap */
 .echovault-heatmap {
-    margin-bottom: 20px;
-    padding: 12px;
+    margin-bottom: 16px;
+    padding: 10px;
     background: var(--background-secondary);
     border-radius: 8px;
 }
 
 .echovault-heatmap-label {
-    font-size: 0.75em;
+    font-size: 0.7em;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--text-faint);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .echovault-heatmap-grid {
@@ -261,9 +261,9 @@
 }
 
 .echovault-heatmap-day-label {
-    width: 20px;
-    height: 12px;
-    font-size: 0.6em;
+    width: 18px;
+    aspect-ratio: 1;
+    font-size: 0.55em;
     color: var(--text-faint);
     display: flex;
     align-items: center;
@@ -285,7 +285,6 @@
 .echovault-heatmap-cell {
     aspect-ratio: 1;
     border-radius: 2px;
-    min-height: 10px;
 }
 
 .echovault-heatmap-level-0 {
@@ -323,8 +322,6 @@
 .echovault-heatmap-legend .echovault-heatmap-cell {
     width: 10px;
     height: 10px;
-    min-height: unset;
-    aspect-ratio: unset;
 }
 
 .echovault-heatmap-legend-label {
@@ -1393,8 +1390,10 @@
     margin-bottom: 12px;
 }
 
+.echovault-tutorial-back,
 .echovault-tutorial-next {
-    min-width: 140px;
+    flex: 1;
+    min-width: 100px;
 }
 
 .echovault-tutorial-skip {

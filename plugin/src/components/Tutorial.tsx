@@ -72,14 +72,14 @@ export function Tutorial({ onComplete }: TutorialProps) {
             </div>
 
             <div className="echovault-tutorial-actions">
-                {step > 0 && (
-                    <button
-                        className="echovault-btn echovault-btn-back"
-                        onClick={() => setStep((s) => s - 1)}
-                    >
-                        Back
-                    </button>
-                )}
+                <button
+                    className="echovault-btn echovault-btn-back echovault-tutorial-back"
+                    onClick={() => setStep((s) => s - 1)}
+                    disabled={step === 0}
+                    style={step === 0 ? { visibility: "hidden" } : undefined}
+                >
+                    Back
+                </button>
                 {!isLast ? (
                     <button
                         className="echovault-btn echovault-btn-primary echovault-tutorial-next"
