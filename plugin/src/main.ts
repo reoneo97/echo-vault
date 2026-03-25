@@ -27,12 +27,14 @@ export default class EchoVaultPlugin extends Plugin {
         this.addCommand({
             id: "commit-and-generate",
             name: "Commit & Generate Flashcards",
+            hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "g" }],
             callback: () => this.commitAndGenerate(),
         });
 
         this.addCommand({
             id: "open-sidebar",
             name: "Open EchoVault Panel",
+            hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "e" }],
             callback: () => this.activateSidebar(),
         });
 
