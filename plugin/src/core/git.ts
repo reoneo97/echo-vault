@@ -66,6 +66,33 @@ async function ensureGitignore(vaultPath: string): Promise<void> {
     }
 }
 
+export async function gitResetLastCommit(vaultPath: string): Promise<void> {
+    await run("git", ["reset", "--soft", "HEAD~1"], vaultPath);
+}
+
+export async function gitCommitCount(vaultPath: string): Promise<number> {
+    try {
+        const count = await run("git", ["rev-list", "--count", "HEAD"], vaultPath);
+        return parseInt(count.trim(), 10);
+    } catch {
+        return 0;
+    }
+}
+
+export interface StatusEntry {
+    status: string;   // "M", "A", "D", "??" etc.
+    file: string;
+}
+
+export async function gitStatus(vaultPath: string): Promise<StatusEntry[]> {
+    const raw = await run("git", ["status", "--short"], vaultPath);
+    if (!raw.trim()) return [];
+    return raw.trim().split("\n").map((line) => ({
+        status: line.substring(0, 2).trim(),
+        file: line.substring(3),
+    }));
+}
+
 export interface CommitResult {
     hash: string;
     hasChanges: boolean;
@@ -138,11 +165,10 @@ export async function gitDiff(
     vaultPath: string,
     commitHash: string
 ): Promise<{ diffText: string; changedFiles: string[] }> {
-    const raw = await run(
-        "git",
-        ["diff", `${commitHash}~1..${commitHash}`, "--", "*.md"],
-        vaultPath
-    );
+    const commitCount = await gitCommitCount(vaultPath);
+    const raw = commitCount <= 1
+        ? await run("git", ["show", "--format=", commitHash, "--", "*.md"], vaultPath)
+        : await run("git", ["diff", `${commitHash}~1`, commitHash, "--", "*.md"], vaultPath);
 
     const changedFiles: string[] = [];
     const addedLines: string[] = [];

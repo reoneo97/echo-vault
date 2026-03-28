@@ -691,6 +691,84 @@
     border-color: var(--color-green);
 }
 
+/* Changed files list */
+.echovault-changed-files {
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-changed-files-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+.echovault-changed-files-toggle:hover {
+    color: var(--text-normal);
+}
+
+.echovault-chevron {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.echovault-chevron-open {
+    transform: rotate(90deg);
+}
+
+.echovault-changed-files-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.echovault-changed-files-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 12px;
+    font-size: 0.78em;
+    font-family: var(--font-monospace);
+}
+
+.echovault-file-status {
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.echovault-file-status-m { color: var(--color-orange); }
+.echovault-file-status-d { color: var(--text-error); }
+.echovault-file-status-new { color: var(--color-green); }
+.echovault-file-status-a { color: var(--color-green); }
+
+.echovault-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.echovault-file-more {
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 3px 12px;
+    font-size: 0.78em;
+}
+
 .echovault-dev-section {
     margin-top: 16px;
     padding-top: 4px;
@@ -725,6 +803,37 @@
 
 .echovault-btn-test:hover {
     opacity: 1;
+}
+
+.echovault-confirm-delete {
+    border: 1px dashed var(--text-error);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.echovault-confirm-warning {
+    margin: 0 0 10px 0;
+    font-size: 0.85em;
+    color: var(--text-error);
+}
+
+.echovault-confirm-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.echovault-confirm-actions .echovault-btn {
+    flex: 1;
+}
+
+.echovault-btn-danger {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-btn-danger:hover {
+    opacity: 0.9;
 }
 
 /* Review summary */

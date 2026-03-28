@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
-import { isOwnGitRepo, gitInit, gitRemoveRepo } from "../core/git";
+import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, StatusEntry } from "../core/git";
 import { checkBackendHealth } from "../core/api-client";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import { Header } from "./Header";
@@ -36,6 +36,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [stats, setStats] = useState({ total: 0, due: 0 });
     const [streak, setStreak] = useState(0);
     const [forecast, setForecast] = useState({ tomorrow: 0, thisWeek: 0 });
+    const [changedFiles, setChangedFiles] = useState<StatusEntry[]>([]);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {
@@ -52,6 +53,15 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         setForecast(plugin.store.getForecast());
     }, [plugin]);
 
+    const refreshChangedFiles = useCallback(async () => {
+        try {
+            const files = await gitStatus(plugin.getVaultPath());
+            setChangedFiles(files);
+        } catch {
+            setChangedFiles([]);
+        }
+    }, [plugin]);
+
     useEffect(() => {
         async function checkGit() {
             const vaultPath = plugin.getVaultPath();
@@ -63,6 +73,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                 } else {
                     setPanel("dashboard");
                 }
+                refreshChangedFiles();
             } else {
                 setPanel("init");
             }
@@ -74,7 +85,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         checkGit();
         checkBackend();
         refreshStats();
-    }, [plugin, refreshStats]);
+    }, [plugin, refreshStats, refreshChangedFiles]);
 
     const handleTutorialComplete = async () => {
         plugin.settings.hasSeenTutorial = true;
@@ -114,6 +125,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             setBackendOnline(healthy);
         }
         refreshStats();
+        refreshChangedFiles();
     };
 
     const handleDeleteRepo = async () => {
@@ -240,6 +252,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                         forecast={forecast}
                         reviewLog={plugin.reviewLog}
                         backendOnline={backendOnline}
+                        changedFiles={changedFiles}
                         onCheckBackend={handleCheckBackend}
                         onCommitAndGenerate={handleCommitAndGenerate}
                         onStartReview={handleStartReview}

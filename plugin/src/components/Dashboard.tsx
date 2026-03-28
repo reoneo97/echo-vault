@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ReviewLog } from "../core/review-log";
+import { StatusEntry } from "../core/git";
 
 interface DashboardProps {
     stats: { total: number; due: number };
@@ -7,6 +8,7 @@ interface DashboardProps {
     forecast: { tomorrow: number; thisWeek: number };
     reviewLog: ReviewLog;
     backendOnline: boolean;
+    changedFiles: StatusEntry[];
     onCheckBackend: () => Promise<boolean>;
     onCommitAndGenerate: () => Promise<void>;
     onStartReview: () => void;
@@ -23,6 +25,7 @@ export function Dashboard({
     forecast,
     reviewLog,
     backendOnline,
+    changedFiles,
     onCheckBackend,
     onCommitAndGenerate,
     onStartReview,
@@ -34,6 +37,11 @@ export function Dashboard({
 }: DashboardProps) {
     const [generating, setGenerating] = useState(false);
     const [checking, setChecking] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [filesExpanded, setFilesExpanded] = useState(false);
+
+    const MAX_VISIBLE_FILES = 10;
+    const mdFiles = changedFiles.filter((e) => e.file.endsWith(".md"));
 
     const handleRetryConnection = async () => {
         setChecking(true);
@@ -71,6 +79,34 @@ export function Dashboard({
             )}
 
             <div className="echovault-actions">
+                {mdFiles.length > 0 && (
+                    <div className="echovault-changed-files">
+                        <button
+                            className="echovault-changed-files-toggle"
+                            onClick={() => setFilesExpanded(!filesExpanded)}
+                        >
+                            <span>{mdFiles.length} note{mdFiles.length !== 1 ? "s" : ""} changed</span>
+                            <span className={`echovault-chevron ${filesExpanded ? "echovault-chevron-open" : ""}`}>&#9656;</span>
+                        </button>
+                        {filesExpanded && (
+                            <ul className="echovault-changed-files-list">
+                                {mdFiles.slice(0, MAX_VISIBLE_FILES).map((entry) => (
+                                    <li key={entry.file}>
+                                        <span className={`echovault-file-status echovault-file-status-${entry.status === "??" ? "new" : entry.status.toLowerCase()}`}>
+                                            {entry.status === "??" ? "N" : entry.status}
+                                        </span>
+                                        <span className="echovault-file-name">{entry.file}</span>
+                                    </li>
+                                ))}
+                                {mdFiles.length > MAX_VISIBLE_FILES && (
+                                    <li className="echovault-file-more">
+                                        +{mdFiles.length - MAX_VISIBLE_FILES} more files
+                                    </li>
+                                )}
+                            </ul>
+                        )}
+                    </div>
+                )}
                 <button
                     className={`echovault-btn ${backendOnline ? "echovault-btn-primary" : "echovault-btn-offline"}`}
                     onClick={backendOnline ? handleCommit : handleRetryConnection}
@@ -125,12 +161,34 @@ export function Dashboard({
                 >
                     Add Test Flashcard
                 </button>
-                <button
-                    className="echovault-btn echovault-btn-test"
-                    onClick={onDeleteRepo}
-                >
-                    Delete EchoVault (.git)
-                </button>
+                {!confirmDelete ? (
+                    <button
+                        className="echovault-btn echovault-btn-test"
+                        onClick={() => setConfirmDelete(true)}
+                    >
+                        Delete EchoVault (.git)
+                    </button>
+                ) : (
+                    <div className="echovault-confirm-delete">
+                        <p className="echovault-confirm-warning">
+                            This will remove the git repository and all commit history. This cannot be undone.
+                        </p>
+                        <div className="echovault-confirm-actions">
+                            <button
+                                className="echovault-btn echovault-btn-danger"
+                                onClick={() => { setConfirmDelete(false); onDeleteRepo(); }}
+                            >
+                                Yes, Delete
+                            </button>
+                            <button
+                                className="echovault-btn echovault-btn-show"
+                                onClick={() => setConfirmDelete(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

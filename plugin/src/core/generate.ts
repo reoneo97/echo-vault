@@ -1,5 +1,5 @@
 import { Notice, Vault, TFile } from "obsidian";
-import { gitCommit, gitDiff, isOwnGitRepo, gitInit } from "./git";
+import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit } from "./git";
 import { generateFlashcards } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
@@ -181,8 +181,10 @@ export async function commitAndGenerate(
         response = await generateFlashcards(diffText, sourceNote, settings, images);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        logger?.error("Backend call failed", { error: msg, sourceNote });
-        new Notice(`Failed to generate flashcards: ${msg}`);
+        logger?.error("Backend call failed, reverting commit", { error: msg, sourceNote });
+        await gitResetLastCommit(vaultPath);
+        logger?.info("Commit reverted", { hash: commitResult.hash });
+        new Notice(`Failed to generate flashcards: ${msg}. Commit reverted — retry when backend is online.`);
         return;
     }
 
