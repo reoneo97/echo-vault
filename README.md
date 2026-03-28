@@ -112,40 +112,9 @@ A ribbon icon (brain) and status bar item showing due card count are also availa
 
 ```
 echo-vault/
-├── assets/
-│   └── icon.svg             # Project icon
-├── backend/
-│   ├── pyproject.toml
-│   ├── .env.example
-│   ├── app/                 # FastAPI server
-│   ├── experiments/         # Model comparison & prompt evals
-│   └── fine_tuning/         # Fine-tuning data prep & scripts
-│
-└── plugin/
-    ├── manifest.json
-    ├── package.json
-    ├── styles.css
-    └── src/
-        ├── main.ts          # Plugin entry point
-        ├── sidebar-view.tsx  # Obsidian view wrapper (mounts React)
-        ├── types.ts         # Interfaces (QA, MCQ, TF card types)
-        ├── settings.ts      # Settings tab UI
-        ├── sm2.ts           # SM-2 algorithm
-        ├── store.ts         # Flashcard JSON persistence
-        ├── git.ts           # Git operations
-        ├── api-client.ts    # Backend HTTP client
-        ├── generate.ts      # Commit → diff → generate orchestration
-        ├── utils.ts         # ID generation, date helpers
-        └── components/      # React UI
-            ├── App.tsx
-            ├── Header.tsx
-            ├── Dashboard.tsx
-            ├── ReviewSession.tsx
-            ├── CardBrowser.tsx
-            ├── AboutModal.tsx
-            └── cards/
-                ├── MCQCard.tsx
-                ├── TFCard.tsx
-                ├── QACard.tsx
-                └── RatingButtons.tsx
+├── plugin/        # Obsidian plugin (TypeScript + React)
+├── backend/       # FastAPI server (Python)
+└── vault/         # Test vault for development
 ```
+
+See [plugin/README.md](plugin/README.md) and [backend/README.md](backend/README.md) for detailed documentation.
