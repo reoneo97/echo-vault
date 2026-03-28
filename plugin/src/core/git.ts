@@ -1,17 +1,28 @@
 import { execFile } from "child_process";
-import { readFile, writeFile } from "fs/promises";
+import { readFile, writeFile, rm } from "fs/promises";
 import { join } from "path";
+import { Logger } from "./logger";
+
+let _logger: Logger | undefined;
+
+export function setGitLogger(logger: Logger) {
+    _logger = logger;
+}
 
 function run(
     command: string,
     args: string[],
     cwd: string
 ): Promise<string> {
+    const cmd = `${command} ${args.join(" ")}`;
+    _logger?.info("git exec", { cmd });
     return new Promise((resolve, reject) => {
         execFile(command, args, { cwd, maxBuffer: 1024 * 1024 * 10 }, (err, stdout, stderr) => {
             if (err) {
+                _logger?.error("git exec failed", { cmd, error: stderr || err.message });
                 reject(new Error(stderr || err.message));
             } else {
+                _logger?.info("git exec ok", { cmd, outputLength: stdout.length });
                 resolve(stdout);
             }
         });
@@ -28,6 +39,10 @@ export async function isOwnGitRepo(vaultPath: string): Promise<boolean> {
     } catch {
         return false;
     }
+}
+
+export async function gitRemoveRepo(vaultPath: string): Promise<void> {
+    await rm(join(vaultPath, ".git"), { recursive: true, force: true });
 }
 
 export async function gitInit(vaultPath: string): Promise<void> {
@@ -125,7 +140,7 @@ export async function gitDiff(
 ): Promise<{ diffText: string; changedFiles: string[] }> {
     const raw = await run(
         "git",
-        ["diff", `${commitHash}~1..${commitHash}`],
+        ["diff", `${commitHash}~1..${commitHash}`, "--", "*.md"],
         vaultPath
     );
 

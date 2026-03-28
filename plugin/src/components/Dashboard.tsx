@@ -6,12 +6,15 @@ interface DashboardProps {
     streak: number;
     forecast: { tomorrow: number; thisWeek: number };
     reviewLog: ReviewLog;
+    backendOnline: boolean;
+    onCheckBackend: () => Promise<boolean>;
     onCommitAndGenerate: () => Promise<void>;
     onStartReview: () => void;
     onAddTestCard: () => Promise<void>;
     onBrowse: () => void;
     onCreate: () => void;
     onGitLog: () => void;
+    onDeleteRepo: () => Promise<void>;
 }
 
 export function Dashboard({
@@ -19,14 +22,24 @@ export function Dashboard({
     streak,
     forecast,
     reviewLog,
+    backendOnline,
+    onCheckBackend,
     onCommitAndGenerate,
     onStartReview,
     onAddTestCard,
     onBrowse,
     onCreate,
     onGitLog,
+    onDeleteRepo,
 }: DashboardProps) {
     const [generating, setGenerating] = useState(false);
+    const [checking, setChecking] = useState(false);
+
+    const handleRetryConnection = async () => {
+        setChecking(true);
+        await onCheckBackend();
+        setChecking(false);
+    };
 
     const handleCommit = async () => {
         setGenerating(true);
@@ -59,12 +72,12 @@ export function Dashboard({
 
             <div className="echovault-actions">
                 <button
-                    className="echovault-btn echovault-btn-primary"
-                    onClick={handleCommit}
-                    disabled={generating}
+                    className={`echovault-btn ${backendOnline ? "echovault-btn-primary" : "echovault-btn-offline"}`}
+                    onClick={backendOnline ? handleCommit : handleRetryConnection}
+                    disabled={generating || checking}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
-                    {generating ? "Working..." : "Commit & Generate"}
+                    {generating ? "Working..." : checking ? "Checking..." : !backendOnline ? "Backend Offline — Tap to Retry" : "Commit & Generate"}
                 </button>
 
                 <button
@@ -111,6 +124,12 @@ export function Dashboard({
                     onClick={onAddTestCard}
                 >
                     Add Test Flashcard
+                </button>
+                <button
+                    className="echovault-btn echovault-btn-test"
+                    onClick={onDeleteRepo}
+                >
+                    Delete EchoVault (.git)
                 </button>
             </div>
         </>

@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
-import { isOwnGitRepo, gitInit } from "../core/git";
+import { isOwnGitRepo, gitInit, gitRemoveRepo } from "../core/git";
+import { checkBackendHealth } from "../core/api-client";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";
@@ -31,6 +32,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [prevPanel, setPrevPanel] = useState<Panel | null>(null);
     const [animating, setAnimating] = useState(false);
     const [gitInitialized, setGitInitialized] = useState(false);
+    const [backendOnline, setBackendOnline] = useState(false);
     const [stats, setStats] = useState({ total: 0, due: 0 });
     const [streak, setStreak] = useState(0);
     const [forecast, setForecast] = useState({ tomorrow: 0, thisWeek: 0 });
@@ -65,7 +67,12 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                 setPanel("init");
             }
         }
+        async function checkBackend() {
+            const healthy = await checkBackendHealth(plugin.settings);
+            setBackendOnline(healthy);
+        }
         checkGit();
+        checkBackend();
         refreshStats();
     }, [plugin, refreshStats]);
 
@@ -92,9 +99,34 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         }
     };
 
+    const handleCheckBackend = async (): Promise<boolean> => {
+        const healthy = await checkBackendHealth(plugin.settings);
+        setBackendOnline(healthy);
+        return healthy;
+    };
+
     const handleCommitAndGenerate = async () => {
-        await plugin.commitAndGenerate();
+        try {
+            await plugin.commitAndGenerate();
+        } catch {
+            // If generate fails, re-check backend health
+            const healthy = await checkBackendHealth(plugin.settings);
+            setBackendOnline(healthy);
+        }
         refreshStats();
+    };
+
+    const handleDeleteRepo = async () => {
+        try {
+            const vaultPath = plugin.getVaultPath();
+            await gitRemoveRepo(vaultPath);
+            setGitInitialized(false);
+            new Notice("Git repository removed.");
+            navigateTo("init");
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            new Notice(`Failed to remove git repo: ${msg}`);
+        }
     };
 
     const handleAddTestCard = async () => {
@@ -170,6 +202,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             <Header
                 gitInitialized={gitInitialized}
                 app={plugin.app}
+                pluginId={plugin.manifest.id}
                 showInfo={panel === "dashboard" || panel === "init"}
                 showTutorialLink={panel === "dashboard" && plugin.settings.hasSeenTutorial}
                 onTutorial={() => navigateTo("tutorial")}
@@ -206,12 +239,15 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                         streak={streak}
                         forecast={forecast}
                         reviewLog={plugin.reviewLog}
+                        backendOnline={backendOnline}
+                        onCheckBackend={handleCheckBackend}
                         onCommitAndGenerate={handleCommitAndGenerate}
                         onStartReview={handleStartReview}
                         onAddTestCard={handleAddTestCard}
                         onBrowse={() => navigateTo("browse")}
                         onCreate={() => navigateTo("create")}
                         onGitLog={() => navigateTo("git-log")}
+                        onDeleteRepo={handleDeleteRepo}
                     />
                 )}
 

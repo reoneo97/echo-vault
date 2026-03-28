@@ -6,6 +6,7 @@ import { ReviewLog } from "./core/review-log";
 import { Logger } from "./core/logger";
 import { checkBackendHealth } from "./core/api-client";
 import { commitAndGenerate } from "./core/generate";
+import { setGitLogger } from "./core/git";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
 export default class EchoVaultPlugin extends Plugin {
@@ -20,6 +21,7 @@ export default class EchoVaultPlugin extends Plugin {
 
         this.logger = new Logger(this.app.vault, this.settings);
         this.logger.info("Plugin loading");
+        setGitLogger(this.logger);
 
         this.store = new FlashcardStore(this.app.vault, this.settings);
         await this.store.load();
@@ -103,6 +105,7 @@ export default class EchoVaultPlugin extends Plugin {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);
             this.logger.error("commitAndGenerate failed", { error: msg });
+            throw e;
         }
     }
 
