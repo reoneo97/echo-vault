@@ -1,13 +1,20 @@
+import json
 import logging
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
+from .config import settings
 from .openrouter import generate_cards_from_diff, agent_health_stream
 from .schemas import GenerateRequest, GenerateResponse
 
 logger = logging.getLogger(__name__)
+
+LOGS_DIR = Path(__file__).parent.parent / "logs"
+LOGS_DIR.mkdir(exist_ok=True)
 
 router = APIRouter()
 
@@ -46,6 +53,20 @@ async def generate_flashcards(req: GenerateRequest):
 
     elapsed = time.time() - start
     logger.info("Generated %d cards in %.1fs for source=%s", len(cards), elapsed, req.source_note)
+
+    # Save request/response log
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "model": settings.openrouter_model,
+        "source_note": req.source_note,
+        "diff_content": req.diff_content,
+        "max_cards": req.max_cards,
+        "cards": [c.model_dump() for c in cards],
+        "elapsed_seconds": round(elapsed, 2),
+    }
+    log_file = LOGS_DIR / "requests.jsonl"
+    with open(log_file, "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
 
     return GenerateResponse(cards=cards)
 

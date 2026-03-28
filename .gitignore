@@ -8,3 +8,4 @@ archive/
 .vscode/
 **/*.env
 plugin/main.js
+backend/logs/
