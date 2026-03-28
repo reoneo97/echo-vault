@@ -21,7 +21,3 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     cards: list[FlashcardPair]
-
-
-class HealthResponse(BaseModel):
-    status: str

@@ -5,3 +5,6 @@ vault/echo-vault/
 *.egg-info/
 CLAUDE.md
 archive/
+.vscode/
+**/*.env
+plugin/main.js

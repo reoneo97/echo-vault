@@ -3,6 +3,7 @@ import base64
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
+import asyncio 
 
 from .config import settings
 from .schemas import FlashcardPair, GenerateResponse, ImageData
@@ -22,6 +23,35 @@ agent = Agent(
     system_prompt=settings.system_prompt,
     output_type=GenerateResponse,
 )
+
+FLASHCARD_PROMPT = (
+    "You are a flashcard generator. Given the following new content from a user's notes, "
+    "create concise question-and-answer flashcards that test understanding of the key concepts. "
+    "Focus on the most important concepts. Make questions specific and answers concise."
+)
+
+HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
+
+
+# async def agent_health_stream():
+#     yield "<html><body><pre>"
+#     async with agent.run_stream(HEALTH_PROMPT) as result:
+#         async for text in result.stream_text(delta=True):
+#             yield text
+#             print(text)
+#     yield "</pre></body></html>"
+
+
+async def agent_health_stream():
+    yield "<html><body><pre>"
+    async with agent.run_stream(HEALTH_PROMPT, output_type=str) as result:
+        async for text in result.stream_text(delta=True):
+            yield text
+            await asyncio.sleep(0)
+    yield "</pre></body></html>"
+
+
+
 
 
 async def generate_cards_from_diff(
@@ -47,8 +77,8 @@ async def generate_cards_from_diff(
             message_parts.append(
                 BinaryContent(data=image_bytes, media_type=img.media_type)
             )
-        result = await agent.run(message_parts)
+        result = await agent.run(message_parts, system_prompt=FLASHCARD_PROMPT)
     else:
-        result = await agent.run(user_message)
+        result = await agent.run(user_message, system_prompt=FLASHCARD_PROMPT)
 
     return result.output.cards[:max_cards]
