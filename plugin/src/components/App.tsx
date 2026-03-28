@@ -23,7 +23,7 @@ const PANEL_LABELS: Record<Panel, string> = {
     "review-all": "Review All",
     browse: "Browse",
     create: "Create",
-    "git-log": "Git Log",
+    "git-log": "History",
 };
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
@@ -162,7 +162,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
 
     // Breadcrumb: show parent > current for non-dashboard panels
     const showBreadcrumb = panel !== "dashboard" && panel !== "init" && panel !== "tutorial";
-    const breadcrumbParent = panel === "review-all" ? "Browse" : "Dashboard";
+    const breadcrumbParent = panel === "review-all" ? "Browse" : "Home";
     const breadcrumbParentPanel: Panel = panel === "review-all" ? "browse" : "dashboard";
 
     return (
@@ -253,6 +253,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     <GitLog
                         vaultPath={plugin.getVaultPath()}
                         store={plugin.store}
+                        reviewLog={plugin.reviewLog}
                         onBack={() => navigateTo("dashboard")}
                     />
                 )}

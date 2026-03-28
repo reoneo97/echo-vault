@@ -1,14 +1,17 @@
 import { useState, useEffect } from "react";
 import { gitLog, LogEntry } from "../git";
 import type { FlashcardStore } from "../store";
+import type { ReviewLog } from "../review-log";
+import { ReviewHeatmap } from "./ReviewHeatmap";
 
 interface GitLogProps {
     vaultPath: string;
     store: FlashcardStore;
+    reviewLog: ReviewLog;
     onBack: () => void;
 }
 
-export function GitLog({ vaultPath, store, onBack }: GitLogProps) {
+export function GitLog({ vaultPath, store, reviewLog, onBack }: GitLogProps) {
     const [entries, setEntries] = useState<LogEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -42,14 +45,23 @@ export function GitLog({ vaultPath, store, onBack }: GitLogProps) {
                 <button className="echovault-btn echovault-btn-back" onClick={onBack}>
                     Back
                 </button>
-                <span className="echovault-progress">Git Log</span>
+                <span className="echovault-progress">History</span>
             </div>
 
-            {loading && <p className="echovault-gitlog-status">Loading commits...</p>}
-            {error && <p className="echovault-gitlog-status echovault-gitlog-error">{error}</p>}
+            <ReviewHeatmap reviewLog={reviewLog} />
 
-            {!loading && !error && entries.length === 0 && (
-                <p className="echovault-gitlog-status">No commits yet</p>
+            {loading && <p className="echovault-gitlog-status">Loading commits...</p>}
+
+            {!loading && (error || entries.length === 0) && (
+                <div className="echovault-gitlog-empty">
+                    <p className="echovault-gitlog-empty-title">No commits yet</p>
+                    <p className="echovault-gitlog-empty-desc">
+                        Head back to the home page and hit "Commit & Generate" to start building your EchoVault.
+                    </p>
+                    <button className="echovault-btn echovault-btn-show" onClick={onBack}>
+                        Back to Home
+                    </button>
+                </div>
             )}
 
             {!loading && !error && entries.length > 0 && (

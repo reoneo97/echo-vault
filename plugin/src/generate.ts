@@ -2,6 +2,7 @@ import { Notice, Vault, TFile } from "obsidian";
 import { gitCommit, gitDiff, isOwnGitRepo, gitInit } from "./git";
 import { generateFlashcards } from "./api-client";
 import { FlashcardStore } from "./store";
+import { Logger } from "./logger";
 import { EchoVaultSettings, Flashcard, ImageAttachment } from "./types";
 import { generateId, nowISO, getTodayDateString } from "./utils";
 
@@ -105,10 +106,14 @@ export async function commitAndGenerate(
     vaultPath: string,
     vault: Vault,
     store: FlashcardStore,
-    settings: EchoVaultSettings
+    settings: EchoVaultSettings,
+    logger?: Logger
 ): Promise<void> {
+    logger?.info("commitAndGenerate started", { vaultPath });
+
     // Ensure the vault has its own git repo (not a parent's)
     if (!(await isOwnGitRepo(vaultPath))) {
+        logger?.info("No git repo found, initializing");
         new Notice("Initializing git repository in vault...");
         await gitInit(vaultPath);
         // Need an initial commit first
@@ -127,12 +132,16 @@ export async function commitAndGenerate(
     );
 
     if (!commitResult.hasChanges) {
+        logger?.info("No changes to commit");
         new Notice("No changes to commit.");
         return;
     }
 
+    logger?.info("Committed", { hash: commitResult.hash });
+
     // Check for duplicate commit
     if (store.hasCommit(commitResult.hash)) {
+        logger?.warn("Duplicate commit skipped", { hash: commitResult.hash });
         new Notice("This commit has already been processed.");
         return;
     }
@@ -143,7 +152,10 @@ export async function commitAndGenerate(
         commitResult.hash
     );
 
+    logger?.info("Diff retrieved", { changedFiles, diffLength: diffText.length });
+
     if (!diffText.trim()) {
+        logger?.info("Empty diff, skipping");
         new Notice("No new text content in this commit.");
         return;
     }
@@ -153,6 +165,7 @@ export async function commitAndGenerate(
     let images: ImageAttachment[] = [];
     if (imageRefs.length > 0) {
         images = await resolveImages(imageRefs, vault);
+        logger?.info("Images resolved", { refs: imageRefs, resolved: images.length });
     }
 
     // Call backend
@@ -168,14 +181,18 @@ export async function commitAndGenerate(
         response = await generateFlashcards(diffText, sourceNote, settings, images);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
+        logger?.error("Backend call failed", { error: msg, sourceNote });
         new Notice(`Failed to generate flashcards: ${msg}`);
         return;
     }
 
     if (!response.cards || response.cards.length === 0) {
+        logger?.warn("Backend returned no cards", { sourceNote });
         new Notice("No flashcards were generated from this diff.");
         return;
     }
+
+    logger?.info("Cards generated", { count: response.cards.length, sourceNote });
 
     // Create Flashcard objects
     const now = nowISO();

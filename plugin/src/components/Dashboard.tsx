@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { ReviewLog } from "../review-log";
-import { ReviewHeatmap } from "./ReviewHeatmap";
 
 interface DashboardProps {
     stats: { total: number; due: number };
@@ -58,8 +57,6 @@ export function Dashboard({
                 </div>
             )}
 
-            <ReviewHeatmap reviewLog={reviewLog} />
-
             <div className="echovault-actions">
                 <button
                     className="echovault-btn echovault-btn-primary"
@@ -101,7 +98,7 @@ export function Dashboard({
                     onClick={onGitLog}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4" /><line x1="1.05" y1="12" x2="7" y2="12" /><line x1="17.01" y1="12" x2="22.96" y2="12" /></svg>
-                    Git Log
+                    History
                 </button>
             </div>
 

@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, EchoVaultSettings } from "./types";
 import { EchoVaultSettingTab } from "./settings";
 import { FlashcardStore } from "./store";
 import { ReviewLog } from "./review-log";
+import { Logger } from "./logger";
 import { checkBackendHealth } from "./api-client";
 import { commitAndGenerate } from "./generate";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
@@ -11,10 +12,14 @@ export default class EchoVaultPlugin extends Plugin {
     settings: EchoVaultSettings = DEFAULT_SETTINGS;
     store!: FlashcardStore;
     reviewLog!: ReviewLog;
+    logger!: Logger;
     private statusBarEl: HTMLElement | null = null;
 
     async onload() {
         await this.loadSettings();
+
+        this.logger = new Logger(this.app.vault, this.settings);
+        this.logger.info("Plugin loading");
 
         this.store = new FlashcardStore(this.app.vault, this.settings);
         await this.store.load();
@@ -54,15 +59,18 @@ export default class EchoVaultPlugin extends Plugin {
         const healthy = await checkBackendHealth(this.settings);
         if (healthy) {
             new Notice("Connected to EchoVault backend");
+            this.logger.info("Backend connected", { url: this.settings.backendUrl });
         } else {
             new Notice("EchoVault backend not reachable. Check settings.");
+            this.logger.warn("Backend not reachable", { url: this.settings.backendUrl });
         }
 
-        console.log("EchoVault loaded");
+        this.logger.info("Plugin loaded");
     }
 
-    onunload() {
-        console.log("EchoVault unloaded");
+    async onunload() {
+        this.logger.info("Plugin unloading");
+        await this.logger.flush();
     }
 
     async loadSettings() {
@@ -88,13 +96,13 @@ export default class EchoVaultPlugin extends Plugin {
     async commitAndGenerate() {
         try {
             const vaultPath = this.getVaultPath();
-            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings);
+            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger);
             this.updateStatusBar();
             this.refreshSidebar();
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);
-            console.error("EchoVault:", e);
+            this.logger.error("commitAndGenerate failed", { error: msg });
         }
     }
 

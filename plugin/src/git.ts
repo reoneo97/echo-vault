@@ -1,4 +1,6 @@
 import { execFile } from "child_process";
+import { readFile, writeFile } from "fs/promises";
+import { join } from "path";
 
 function run(
     command: string,
@@ -30,6 +32,23 @@ export async function isOwnGitRepo(vaultPath: string): Promise<boolean> {
 
 export async function gitInit(vaultPath: string): Promise<void> {
     await run("git", ["init"], vaultPath);
+    await ensureGitignore(vaultPath);
+}
+
+async function ensureGitignore(vaultPath: string): Promise<void> {
+    const gitignorePath = join(vaultPath, ".gitignore");
+    let content = "";
+    try {
+        content = await readFile(gitignorePath, "utf-8");
+    } catch {
+        // File doesn't exist yet
+    }
+
+    const lines = content.split("\n");
+    if (!lines.some((line) => line.trim() === ".obsidian")) {
+        const newEntry = content.endsWith("\n") || content === "" ? ".obsidian\n" : "\n.obsidian\n";
+        await writeFile(gitignorePath, content + newEntry, "utf-8");
+    }
 }
 
 export interface CommitResult {

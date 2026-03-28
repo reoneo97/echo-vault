@@ -6,7 +6,7 @@ interface ReviewHeatmapProps {
 }
 
 const DAY_LABELS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const WEEKS = 8;
+const WEEKS = 13;
 
 function getIntensity(count: number): number {
     if (count === 0) return 0;
