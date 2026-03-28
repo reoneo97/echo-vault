@@ -4,8 +4,9 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
+from fastapi.templating import Jinja2Templates
 
 from .config import settings
 from .openrouter import generate_cards_from_diff, agent_health_stream
@@ -15,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 LOGS_DIR = Path(__file__).parent.parent / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
+
+templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 router = APIRouter()
 
@@ -69,6 +72,26 @@ async def generate_flashcards(req: GenerateRequest):
         f.write(json.dumps(log_entry) + "\n")
 
     return GenerateResponse(cards=cards)
+
+
+@router.get("/logs")
+async def view_logs(request: Request, limit: int = Query(default=20, ge=1, le=200)):
+    log_file = LOGS_DIR / "requests.jsonl"
+    entries: list[dict] = []
+    if log_file.exists():
+        lines = log_file.read_text().strip().splitlines()
+        for line in reversed(lines):
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+            if len(entries) >= limit:
+                break
+
+    return templates.TemplateResponse("logs.html", {
+        "request": request,
+        "entries": entries,
+    })
 
 
 @router.get("/")
