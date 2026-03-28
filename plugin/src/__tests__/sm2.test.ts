@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sm2 } from "../sm2";
+import { sm2 } from "../core/sm2";
 
 describe("sm2", () => {
     const defaultEF = 2.5;

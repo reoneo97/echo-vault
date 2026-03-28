@@ -3,8 +3,8 @@ import { gitCommit, gitDiff, isOwnGitRepo, gitInit } from "./git";
 import { generateFlashcards } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
-import { EchoVaultSettings, Flashcard, ImageAttachment } from "./types";
-import { generateId, nowISO, getTodayDateString } from "./utils";
+import { EchoVaultSettings, Flashcard, ImageAttachment } from "../types";
+import { generateId, nowISO, getTodayDateString } from "../utils";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "bmp", "webp"]);
 const MAX_IMAGES = 5;

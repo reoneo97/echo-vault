@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { gitLog, LogEntry } from "../git";
-import type { FlashcardStore } from "../store";
-import type { ReviewLog } from "../review-log";
+import { gitLog, LogEntry } from "../core/git";
+import type { FlashcardStore } from "../core/store";
+import type { ReviewLog } from "../core/review-log";
 import { ReviewHeatmap } from "./ReviewHeatmap";
 
 interface GitLogProps {

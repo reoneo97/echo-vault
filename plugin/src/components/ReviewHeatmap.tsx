@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ReviewLog } from "../review-log";
+import { ReviewLog } from "../core/review-log";
 
 interface ReviewHeatmapProps {
     reviewLog: ReviewLog;

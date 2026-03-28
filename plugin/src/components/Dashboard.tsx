@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ReviewLog } from "../review-log";
+import { ReviewLog } from "../core/review-log";
 
 interface DashboardProps {
     stats: { total: number; due: number };

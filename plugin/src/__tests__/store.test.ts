@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { FlashcardStore } from "../store";
+import { FlashcardStore } from "../core/store";
 import { Flashcard, EchoVaultSettings, DEFAULT_SETTINGS } from "../types";
 
 function createMockVault(data: Record<string, string> = {}) {

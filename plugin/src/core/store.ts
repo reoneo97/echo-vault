@@ -1,6 +1,6 @@
 import { Vault } from "obsidian";
-import { Flashcard, FlashcardData, EchoVaultSettings } from "./types";
-import { getTodayDateString } from "./utils";
+import { Flashcard, FlashcardData, EchoVaultSettings } from "../types";
+import { getTodayDateString } from "../utils";
 
 const EMPTY_DATA: FlashcardData = { version: 1, cards: [] };
 

@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { App, TFile, MarkdownView } from "obsidian";
 import { CardType, Flashcard } from "../types";
 import { generateId, getTodayDateString, nowISO } from "../utils";
-import type { FlashcardStore } from "../store";
+import type { FlashcardStore } from "../core/store";
 
 interface CreateCardProps {
     store: FlashcardStore;

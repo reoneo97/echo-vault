@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type EchoVaultPlugin from "../main";
 import { Flashcard } from "../types";
-import { sm2 } from "../sm2";
+import { sm2 } from "../core/sm2";
 import { nowISO } from "../utils";
 import { MCQCard } from "./cards/MCQCard";
 import { TFCard } from "./cards/TFCard";

@@ -1,11 +1,11 @@
 import { Notice, Plugin } from "obsidian";
 import { DEFAULT_SETTINGS, EchoVaultSettings } from "./types";
 import { EchoVaultSettingTab } from "./settings";
-import { FlashcardStore } from "./store";
-import { ReviewLog } from "./review-log";
-import { Logger } from "./logger";
-import { checkBackendHealth } from "./api-client";
-import { commitAndGenerate } from "./generate";
+import { FlashcardStore } from "./core/store";
+import { ReviewLog } from "./core/review-log";
+import { Logger } from "./core/logger";
+import { checkBackendHealth } from "./core/api-client";
+import { commitAndGenerate } from "./core/generate";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
 export default class EchoVaultPlugin extends Plugin {

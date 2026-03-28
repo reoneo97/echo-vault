@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
-import { isOwnGitRepo, gitInit } from "../git";
+import { isOwnGitRepo, gitInit } from "../core/git";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";

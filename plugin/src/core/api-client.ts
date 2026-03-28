@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { EchoVaultSettings, GenerateResponse, ImageAttachment } from "./types";
+import { EchoVaultSettings, GenerateResponse, ImageAttachment } from "../types";
 
 export async function checkBackendHealth(
     settings: EchoVaultSettings

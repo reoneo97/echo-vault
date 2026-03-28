@@ -4,6 +4,7 @@ import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
 import { getTodayDateString } from "../utils";
 import { EmptyState } from "./EmptyState";
+import { MarkdownText } from "./MarkdownText";
 
 type SortField = "created" | "nextReview" | "easiness";
 type TypeFilter = "all" | CardType;
@@ -144,7 +145,7 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                                     )}
                                 </div>
                                 <div className="echovault-browser-card-question">
-                                    {card.question}
+                                    <MarkdownText app={plugin.app} markdown={card.question} sourcePath={card.sourceNotePath !== "manual" ? card.sourceNotePath : undefined} className="echovault-md" />
                                 </div>
                             </div>
 
@@ -152,7 +153,7 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                                 <div className="echovault-browser-card-detail">
                                     <div className="echovault-browser-card-answer">
                                         <span className="echovault-browser-label">Answer</span>
-                                        {card.answer}
+                                        <MarkdownText app={plugin.app} markdown={card.answer} sourcePath={card.sourceNotePath !== "manual" ? card.sourceNotePath : undefined} className="echovault-md" />
                                     </div>
 
                                     {card.type === "mcq" && (

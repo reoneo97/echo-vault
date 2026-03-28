@@ -1,5 +1,5 @@
 import { Vault } from "obsidian";
-import { EchoVaultSettings } from "./types";
+import { EchoVaultSettings } from "../types";
 
 type LogLevel = "INFO" | "WARN" | "ERROR";
 
