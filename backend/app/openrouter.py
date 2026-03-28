@@ -18,12 +18,6 @@ model = OpenAIModel(
     provider=provider,
 )
 
-agent = Agent(
-    model,
-    system_prompt=settings.system_prompt,
-    output_type=GenerateResponse,
-)
-
 FLASHCARD_PROMPT = (
     "You are a flashcard generator. Given the following new content from a user's notes, "
     "create concise question-and-answer flashcards that test understanding of the key concepts. "
@@ -31,6 +25,17 @@ FLASHCARD_PROMPT = (
 )
 
 HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
+
+flashcard_agent = Agent(
+    model,
+    system_prompt=FLASHCARD_PROMPT,
+    output_type=GenerateResponse,
+)
+
+health_agent = Agent(
+    model,
+    system_prompt=settings.system_prompt,
+)
 
 
 # async def agent_health_stream():
@@ -44,7 +49,7 @@ HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short 
 
 async def agent_health_stream():
     yield "<html><body><pre>"
-    async with agent.run_stream(HEALTH_PROMPT, output_type=str) as result:
+    async with health_agent.run_stream(HEALTH_PROMPT, output_type=str) as result:
         async for text in result.stream_text(delta=True):
             yield text
             await asyncio.sleep(0)
@@ -60,6 +65,7 @@ async def generate_cards_from_diff(
     max_cards: int,
     images: list[ImageData] | None = None,
 ) -> list[FlashcardPair]:
+    
     user_message = f"Source note: {source_note}\n\nNew content:\n{diff_content}"
     if max_cards:
         user_message += f"\n\nGenerate at most {max_cards} flashcards."
@@ -77,8 +83,8 @@ async def generate_cards_from_diff(
             message_parts.append(
                 BinaryContent(data=image_bytes, media_type=img.media_type)
             )
-        result = await agent.run(message_parts, system_prompt=FLASHCARD_PROMPT)
+        result = await flashcard_agent.run(message_parts)
     else:
-        result = await agent.run(user_message, system_prompt=FLASHCARD_PROMPT)
+        result = await flashcard_agent.run(user_message)
 
     return result.output.cards[:max_cards]
