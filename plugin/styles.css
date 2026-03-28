@@ -691,6 +691,33 @@
     border-color: var(--color-green);
 }
 
+/* Progress bar */
+.echovault-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.echovault-progress-bar {
+    height: 4px;
+    background: var(--background-modifier-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.echovault-progress-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.echovault-progress-step {
+    font-size: 0.72em;
+    color: var(--text-faint);
+    text-align: center;
+}
+
 /* Changed files list */
 .echovault-changed-files {
     margin-bottom: 8px;

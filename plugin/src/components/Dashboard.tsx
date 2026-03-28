@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ReviewLog } from "../core/review-log";
 import { StatusEntry } from "../core/git";
+import { GenerateStage } from "../core/generate";
 
 interface DashboardProps {
     stats: { total: number; due: number };
@@ -9,6 +10,7 @@ interface DashboardProps {
     reviewLog: ReviewLog;
     backendOnline: boolean;
     changedFiles: StatusEntry[];
+    generateStage: GenerateStage | null;
     onCheckBackend: () => Promise<boolean>;
     onCommitAndGenerate: () => Promise<void>;
     onStartReview: () => void;
@@ -26,6 +28,7 @@ export function Dashboard({
     reviewLog,
     backendOnline,
     changedFiles,
+    generateStage,
     onCheckBackend,
     onCommitAndGenerate,
     onStartReview,
@@ -42,6 +45,15 @@ export function Dashboard({
 
     const MAX_VISIBLE_FILES = 10;
     const mdFiles = changedFiles.filter((e) => e.file.endsWith(".md"));
+
+    const STAGES: GenerateStage[] = ["committing", "analyzing", "generating", "saving"];
+    const STAGE_LABELS: Record<GenerateStage, string> = {
+        committing: "Committing changes...",
+        analyzing: "Analyzing diff...",
+        generating: "Generating flashcards...",
+        saving: "Saving cards...",
+    };
+    const stageIndex = generateStage ? STAGES.indexOf(generateStage) : -1;
 
     const handleRetryConnection = async () => {
         setChecking(true);
@@ -113,8 +125,21 @@ export function Dashboard({
                     disabled={generating || checking}
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
-                    {generating ? "Working..." : checking ? "Checking..." : !backendOnline ? "Backend Offline — Tap to Retry" : "Commit & Generate"}
+                    {generating && generateStage ? STAGE_LABELS[generateStage] : checking ? "Checking..." : !backendOnline ? "Backend Offline — Tap to Retry" : "Commit & Generate"}
                 </button>
+                {generating && generateStage && (
+                    <div className="echovault-progress">
+                        <div className="echovault-progress-bar">
+                            <div
+                                className="echovault-progress-fill"
+                                style={{ width: `${((stageIndex + 1) / STAGES.length) * 100}%` }}
+                            />
+                        </div>
+                        <span className="echovault-progress-step">
+                            Step {stageIndex + 1} of {STAGES.length}
+                        </span>
+                    </div>
+                )}
 
                 <button
                     className="echovault-btn echovault-btn-show"

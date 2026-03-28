@@ -4,6 +4,7 @@ import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType } from "../types";
 import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, StatusEntry } from "../core/git";
 import { checkBackendHealth } from "../core/api-client";
+import { GenerateStage } from "../core/generate";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";
@@ -37,6 +38,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [streak, setStreak] = useState(0);
     const [forecast, setForecast] = useState({ tomorrow: 0, thisWeek: 0 });
     const [changedFiles, setChangedFiles] = useState<StatusEntry[]>([]);
+    const [generateStage, setGenerateStage] = useState<GenerateStage | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {
@@ -61,6 +63,13 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             setChangedFiles([]);
         }
     }, [plugin]);
+
+    // Refresh file list whenever dashboard is shown
+    useEffect(() => {
+        if (panel === "dashboard") {
+            refreshChangedFiles();
+        }
+    }, [panel, refreshChangedFiles]);
 
     useEffect(() => {
         async function checkGit() {
@@ -118,12 +127,13 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
 
     const handleCommitAndGenerate = async () => {
         try {
-            await plugin.commitAndGenerate();
+            await plugin.commitAndGenerate((stage) => setGenerateStage(stage));
         } catch {
             // If generate fails, re-check backend health
             const healthy = await checkBackendHealth(plugin.settings);
             setBackendOnline(healthy);
         }
+        setGenerateStage(null);
         refreshStats();
         refreshChangedFiles();
     };
@@ -253,6 +263,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                         reviewLog={plugin.reviewLog}
                         backendOnline={backendOnline}
                         changedFiles={changedFiles}
+                        generateStage={generateStage}
                         onCheckBackend={handleCheckBackend}
                         onCommitAndGenerate={handleCommitAndGenerate}
                         onStartReview={handleStartReview}

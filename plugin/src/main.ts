@@ -5,7 +5,7 @@ import { FlashcardStore } from "./core/store";
 import { ReviewLog } from "./core/review-log";
 import { Logger } from "./core/logger";
 import { checkBackendHealth } from "./core/api-client";
-import { commitAndGenerate } from "./core/generate";
+import { commitAndGenerate, GenerateStage } from "./core/generate";
 import { setGitLogger } from "./core/git";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
@@ -95,10 +95,10 @@ export default class EchoVaultPlugin extends Plugin {
         throw new Error("Could not determine vault path");
     }
 
-    async commitAndGenerate() {
+    async commitAndGenerate(onProgress?: (stage: GenerateStage) => void) {
         try {
             const vaultPath = this.getVaultPath();
-            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger);
+            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger, onProgress);
             this.updateStatusBar();
             this.refreshSidebar();
         } catch (e: unknown) {

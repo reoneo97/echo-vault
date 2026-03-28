@@ -102,12 +102,15 @@ async function resolveImages(
     return attachments;
 }
 
+export type GenerateStage = "committing" | "analyzing" | "generating" | "saving";
+
 export async function commitAndGenerate(
     vaultPath: string,
     vault: Vault,
     store: FlashcardStore,
     settings: EchoVaultSettings,
-    logger?: Logger
+    logger?: Logger,
+    onProgress?: (stage: GenerateStage) => void
 ): Promise<void> {
     logger?.info("commitAndGenerate started", { vaultPath });
 
@@ -125,6 +128,7 @@ export async function commitAndGenerate(
     }
 
     // Commit current changes
+    onProgress?.("committing");
     new Notice("Committing vault changes...");
     const commitResult = await gitCommit(
         vaultPath,
@@ -147,6 +151,7 @@ export async function commitAndGenerate(
     }
 
     // Get diff
+    onProgress?.("analyzing");
     const { diffText, changedFiles } = await gitDiff(
         vaultPath,
         commitResult.hash
@@ -169,6 +174,7 @@ export async function commitAndGenerate(
     }
 
     // Call backend
+    onProgress?.("generating");
     new Notice(
         images.length > 0
             ? `Generating flashcards (${images.length} image${images.length > 1 ? "s" : ""} detected)...`
@@ -196,7 +202,8 @@ export async function commitAndGenerate(
 
     logger?.info("Cards generated", { count: response.cards.length, sourceNote });
 
-    // Create Flashcard objects
+    // Save cards
+    onProgress?.("saving");
     const now = nowISO();
     const today = getTodayDateString();
     const newCards: Flashcard[] = response.cards.map((c) => ({
