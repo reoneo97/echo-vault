@@ -34,7 +34,11 @@ backend/
 │   ├── config.py         # Settings via pydantic-settings (.env)
 │   ├── routes.py         # API endpoints
 │   ├── schemas.py        # Pydantic request/response models
-│   └── openrouter.py     # LLM integration via PydanticAI
+│   ├── openrouter.py     # LLM integration via PydanticAI
+│   └── templates/
+│       └── logs.html     # Jinja2 template for request log viewer
+├── logs/
+│   └── requests.jsonl    # JSONL request/response log (auto-created)
 ├── tests/
 │   ├── conftest.py       # Pytest fixtures (TestClient, AsyncClient)
 │   ├── test_schemas.py   # Pydantic model validation tests
@@ -49,12 +53,13 @@ backend/
 ### Request Flow
 
 ```
-Plugin POST /generate-flashcards
-  → routes.py validates request (GenerateRequest schema)
-  → openrouter.py builds prompt from diff + optional images
-  → PydanticAI agent calls LLM via OpenRouter
-  → LLM returns structured output (GenerateResponse schema)
-  → routes.py returns list of flashcard pairs to plugin
+Plugin POST /generate-flashcards-batch
+  → routes.py validates request (BatchGenerateRequest schema)
+  → Distributes max_cards budget proportionally across files
+  → Parallel LLM calls via asyncio.gather (one per file)
+  → Each call: openrouter.py builds prompt → PydanticAI agent → LLM → structured output
+  → routes.py returns cards grouped by source file (BatchGenerateResponse)
+  → Logs full request/response to logs/requests.jsonl
 ```
 
 ### Key Modules
@@ -64,15 +69,23 @@ Plugin POST /generate-flashcards
 **`config.py`** — Uses `pydantic-settings` to load configuration from a `.env` file. The `Settings` class defines the OpenRouter API key, model name, and system prompt.
 
 **`schemas.py`** — Pydantic models that define the API contract:
-- `GenerateRequest` — diff content, source note path, max cards, optional images
-- `GenerateResponse` — list of `FlashcardPair` (question + answer)
+- `GenerateRequest` / `GenerateResponse` — single-file endpoint (legacy)
+- `BatchGenerateRequest` / `BatchGenerateResponse` — per-file batch endpoint (current)
+- `FileDiffEntry` — per-file diff with path, content, and optional images
+- `FileResultEntry` — per-file result with source_note and cards
 - `ImageData` — base64-encoded image attachment for multimodal prompts
 
-**`routes.py`** — Two endpoints:
+**`routes.py`** — Endpoints:
 - `GET /health` — simple health check
-- `POST /generate-flashcards` — validates input, calls LLM, returns cards
+- `GET /agent-health` — streaming LLM health check via OpenRouter
+- `POST /generate-flashcards` — single-file generation (legacy)
+- `POST /generate-flashcards-batch` — per-file generation with parallel LLM calls and proportional card budget distribution
+- `GET /logs?limit=20` — HTML request log viewer (Jinja2 template)
 
-**`openrouter.py`** — Wraps the LLM call using PydanticAI's `Agent` with structured output. When images are included, it builds a multimodal message with `BinaryContent` objects so the LLM can see referenced images from the user's notes.
+**`openrouter.py`** — Two PydanticAI agents:
+- `flashcard_agent` — structured output (`GenerateResponse`), uses `FLASHCARD_PROMPT` as system prompt
+- `health_agent` — streaming text output for health checks
+When images are included, it builds a multimodal message with `BinaryContent` objects so the LLM can see referenced images from the user's notes.
 
 ## API Endpoints
 
@@ -80,37 +93,56 @@ Plugin POST /generate-flashcards
 
 Returns `{"status": "ok"}` when the server is running.
 
-### `POST /generate-flashcards`
+### `POST /generate-flashcards-batch`
 
-Generate flashcards from a git diff.
+Generate flashcards from per-file diffs. LLM calls run in parallel. Card budget is distributed proportionally to diff size.
 
 **Request body:**
 ```json
 {
-  "diff_content": "string (required) — added lines from the git diff",
-  "source_note": "string — filename of the changed note",
-  "max_cards": 10,
-  "images": [
+  "files": [
     {
-      "filename": "diagram.png",
-      "data": "base64-encoded image bytes",
-      "media_type": "image/png"
+      "path": "notes/kafka.md",
+      "diff_content": "added lines from this file's diff",
+      "images": []
+    },
+    {
+      "path": "notes/react.md",
+      "diff_content": "added lines from this file's diff",
+      "images": []
     }
-  ]
+  ],
+  "max_cards": 10
 }
 ```
 
 **Response:**
 ```json
 {
-  "cards": [
+  "file_results": [
     {
-      "question": "What is...",
-      "answer": "It is..."
+      "source_note": "notes/kafka.md",
+      "cards": [
+        { "question": "What is Kafka?", "answer": "A distributed event streaming platform." }
+      ]
+    },
+    {
+      "source_note": "notes/react.md",
+      "cards": [
+        { "question": "What are React hooks?", "answer": "Functions that let you use state in function components." }
+      ]
     }
   ]
 }
 ```
+
+### `GET /logs?limit=20`
+
+HTML dashboard showing recent request/response logs with diffs and generated cards. Supports both legacy single-file and batch log entries.
+
+### `POST /generate-flashcards` (legacy)
+
+Single-file generation endpoint. Still functional for backwards compatibility.
 
 ## Testing
 

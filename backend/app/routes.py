@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import time
@@ -10,7 +11,11 @@ from fastapi.templating import Jinja2Templates
 
 from .config import settings
 from .openrouter import generate_cards_from_diff, agent_health_stream
-from .schemas import GenerateRequest, GenerateResponse
+from .schemas import (
+    GenerateRequest, GenerateResponse,
+    BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
+    FeedbackRequest, FeedbackResponse,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +79,97 @@ async def generate_flashcards(req: GenerateRequest):
     return GenerateResponse(cards=cards)
 
 
+@router.post("/generate-flashcards-batch", response_model=BatchGenerateResponse)
+async def generate_flashcards_batch(req: BatchGenerateRequest):
+    valid_files = [f for f in req.files if f.diff_content.strip()]
+    if not valid_files:
+        raise HTTPException(status_code=400, detail="all diffs are empty")
+
+    # Distribute max_cards budget proportionally to diff size
+    total_len = sum(len(f.diff_content) for f in valid_files)
+    budgets = [max(1, round(req.max_cards * len(f.diff_content) / total_len)) for f in valid_files]
+    # Cap total to not exceed max_cards
+    while sum(budgets) > req.max_cards and len(budgets) > 1:
+        max_idx = budgets.index(max(budgets))
+        budgets[max_idx] -= 1
+
+    logger.info(
+        "Batch request: %d files, max_cards=%d, budgets=%s",
+        len(valid_files), req.max_cards, budgets,
+    )
+
+    start = time.time()
+    tasks = [
+        generate_cards_from_diff(
+            diff_content=f.diff_content,
+            source_note=f.path,
+            max_cards=budget,
+            images=f.images if f.images else None,
+        )
+        for f, budget in zip(valid_files, budgets)
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    elapsed = time.time() - start
+
+    file_results: list[FileResultEntry] = []
+    for f, result in zip(valid_files, results):
+        if isinstance(result, Exception):
+            logger.error("Generate failed for file=%s: %s", f.path, result)
+            file_results.append(FileResultEntry(source_note=f.path, cards=[]))
+        else:
+            file_results.append(FileResultEntry(source_note=f.path, cards=result))
+
+    total_cards = sum(len(fr.cards) for fr in file_results)
+    logger.info("Batch done: %d cards in %.1fs across %d files", total_cards, elapsed, len(valid_files))
+
+    # Log batch request
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "model": settings.openrouter_model,
+        "batch": True,
+        "max_cards": req.max_cards,
+        "files": [
+            {
+                "source_note": fr.source_note,
+                "diff_content": f.diff_content,
+                "num_images": len(f.images),
+                "cards": [c.model_dump() for c in fr.cards],
+                "budget": budget,
+            }
+            for f, fr, budget in zip(valid_files, file_results, budgets)
+        ],
+        "total_cards": total_cards,
+        "elapsed_seconds": round(elapsed, 2),
+    }
+    log_file = LOGS_DIR / "requests.jsonl"
+    with open(log_file, "a") as fh:
+        fh.write(json.dumps(log_entry) + "\n")
+
+    return BatchGenerateResponse(file_results=file_results)
+
+
+@router.post("/feedback", response_model=FeedbackResponse)
+async def submit_feedback(req: FeedbackRequest):
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "total_entries": len(req.entries),
+        "accepted": sum(1 for e in req.entries if e.decision == "accepted"),
+        "rejected": sum(1 for e in req.entries if e.decision == "rejected"),
+        "edited": sum(1 for e in req.entries if e.decision == "edited"),
+        "entries": [e.model_dump() for e in req.entries],
+    }
+    log_file = LOGS_DIR / "feedback.jsonl"
+    with open(log_file, "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
+
+    logger.info(
+        "Feedback received: %d entries (%d accepted, %d rejected, %d edited)",
+        log_entry["total_entries"], log_entry["accepted"],
+        log_entry["rejected"], log_entry["edited"],
+    )
+    return FeedbackResponse(status="ok", received=len(req.entries))
+
+
 @router.get("/logs")
 async def view_logs(request: Request, limit: int = Query(default=20, ge=1, le=200)):
     log_file = LOGS_DIR / "requests.jsonl"
@@ -89,6 +185,26 @@ async def view_logs(request: Request, limit: int = Query(default=20, ge=1, le=20
                 break
 
     return templates.TemplateResponse("logs.html", {
+        "request": request,
+        "entries": entries,
+    })
+
+
+@router.get("/feedback-logs")
+async def view_feedback_logs(request: Request, limit: int = Query(default=20, ge=1, le=200)):
+    log_file = LOGS_DIR / "feedback.jsonl"
+    entries: list[dict] = []
+    if log_file.exists():
+        lines = log_file.read_text().strip().splitlines()
+        for line in reversed(lines):
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+            if len(entries) >= limit:
+                break
+
+    return templates.TemplateResponse("feedback-logs.html", {
         "request": request,
         "entries": entries,
     })

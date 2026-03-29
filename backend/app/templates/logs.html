@@ -18,6 +18,7 @@
     .entry-time { color: #666; font-size: 0.75em; }
     .entry-body { padding: 16px; }
     .section { margin-bottom: 16px; }
+    .section:last-child { margin-bottom: 0; }
     .section h3 { color: #a8a8d8; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
     pre.diff { background: #0a0a1a; border: 1px solid #0f3460; border-radius: 6px; padding: 12px; font-size: 0.8em; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #b0b0d0; }
     .card { background: #0f3460; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
@@ -25,6 +26,10 @@
     .card-q { margin-bottom: 6px; line-height: 1.5; }
     .card-a { color: #53d8a8; line-height: 1.5; }
     .empty { color: #666; font-style: italic; }
+    .file-block { border: 1px solid #0f3460; border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+    .file-header { background: #0f3460; padding: 8px 14px; font-size: 0.85em; font-weight: 600; color: #fff; display: flex; justify-content: space-between; }
+    .file-header .file-meta { color: #53d8a8; font-weight: 400; font-size: 0.85em; }
+    .file-body { padding: 12px; }
 </style>
 </head>
 <body>
@@ -36,29 +41,65 @@
         <details class="entry" {% if loop.first %}open{% endif %}>
             <summary>
                 <span class="entry-num">#{{ entries | length - loop.index0 }}</span>
-                <span class="entry-source">{{ entry.source_note | e }}</span>
-                <span class="entry-meta">{{ entry.cards | length }} cards &middot; {{ entry.elapsed_seconds }}s &middot; {{ entry.model | e }}</span>
+                {% if entry.batch %}
+                    <span class="entry-source">{{ entry.files | length }} file{{ 's' if entry.files | length != 1 }}</span>
+                    <span class="entry-meta">{{ entry.total_cards }} cards &middot; {{ entry.elapsed_seconds }}s &middot; {{ entry.model | e }}</span>
+                {% else %}
+                    <span class="entry-source">{{ entry.source_note | e }}</span>
+                    <span class="entry-meta">{{ entry.cards | length }} cards &middot; {{ entry.elapsed_seconds }}s &middot; {{ entry.model | e }}</span>
+                {% endif %}
                 <span class="entry-time">{{ entry.timestamp }}</span>
             </summary>
             <div class="entry-body">
-                <div class="section">
-                    <h3>Diff</h3>
-                    <pre class="diff">{{ entry.diff_content | e }}</pre>
-                </div>
-                <div class="section">
-                    <h3>Generated Cards ({{ entry.cards | length }})</h3>
-                    {% if entry.cards %}
-                        {% for card in entry.cards %}
-                        <div class="card">
-                            <div class="card-num">Card {{ loop.index }}</div>
-                            <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
-                            <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                {% if entry.batch %}
+                    {% for file in entry.files %}
+                    <div class="file-block">
+                        <div class="file-header">
+                            <span>{{ file.source_note | e }}</span>
+                            <span class="file-meta">{{ file.cards | length }} cards &middot; budget {{ file.budget }}</span>
                         </div>
-                        {% endfor %}
-                    {% else %}
-                        <p class="empty">No cards generated</p>
-                    {% endif %}
-                </div>
+                        <div class="file-body">
+                            <div class="section">
+                                <h3>Diff</h3>
+                                <pre class="diff">{{ file.diff_content | e }}</pre>
+                            </div>
+                            <div class="section">
+                                <h3>Cards</h3>
+                                {% if file.cards %}
+                                    {% for card in file.cards %}
+                                    <div class="card">
+                                        <div class="card-num">Card {{ loop.index }}</div>
+                                        <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
+                                        <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="empty">No cards generated</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="section">
+                        <h3>Diff</h3>
+                        <pre class="diff">{{ entry.diff_content | e }}</pre>
+                    </div>
+                    <div class="section">
+                        <h3>Generated Cards ({{ entry.cards | length }})</h3>
+                        {% if entry.cards %}
+                            {% for card in entry.cards %}
+                            <div class="card">
+                                <div class="card-num">Card {{ loop.index }}</div>
+                                <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
+                                <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty">No cards generated</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
             </div>
         </details>
         {% endfor %}

@@ -21,3 +21,42 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     cards: list[FlashcardPair]
+
+
+class FileDiffEntry(BaseModel):
+    path: str
+    diff_content: str
+    images: list[ImageData] = []
+
+
+class BatchGenerateRequest(BaseModel):
+    files: list[FileDiffEntry]
+    max_cards: int = 10
+
+
+class FileResultEntry(BaseModel):
+    source_note: str
+    cards: list[FlashcardPair]
+
+
+class BatchGenerateResponse(BaseModel):
+    file_results: list[FileResultEntry]
+
+
+class CardFeedbackEntry(BaseModel):
+    question: str
+    answer: str
+    source_note: str
+    commit_hash: str
+    decision: str  # "accepted" | "rejected" | "edited"
+    edited_question: str | None = None
+    edited_answer: str | None = None
+
+
+class FeedbackRequest(BaseModel):
+    entries: list[CardFeedbackEntry]
+
+
+class FeedbackResponse(BaseModel):
+    status: str
+    received: int
