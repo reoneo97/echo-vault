@@ -163,7 +163,23 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         new Notice(`Saved ${acceptedCards.length} card${acceptedCards.length !== 1 ? "s" : ""}`);
     };
 
-    const handleStagingCancel = () => {
+    const handleStagingCancel = async () => {
+        if (generationResult) {
+            const feedback: CardFeedbackEntry[] = generationResult.fileGroups.flatMap((fg) =>
+                fg.cards.map((c) => ({
+                    question: c.question,
+                    answer: c.answer,
+                    source_note: c.sourceNotePath,
+                    commit_hash: c.commitHash,
+                    decision: "rejected" as const,
+                }))
+            );
+            try {
+                await sendFeedback(feedback, plugin.settings);
+            } catch {
+                // Best-effort
+            }
+        }
         setGenerationResult(null);
         refreshStats();
         refreshChangedFiles();
