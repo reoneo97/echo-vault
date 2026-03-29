@@ -1129,6 +1129,12 @@
     border-color: var(--text-error);
 }
 
+.echovault-staging-action-collapse {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.7em;
+}
+
 .echovault-staging-footer {
     display: flex;
     flex-direction: column;

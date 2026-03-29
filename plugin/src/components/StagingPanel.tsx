@@ -279,12 +279,22 @@ function StagingCard({
         ? "echovault-staging-card-rejected"
         : "";
 
-    // Auto-collapse when a decision is made
+    // Auto-collapse when a decision is first made, or when re-clicking the same decision
     const prevDecision = useRef(card.decision);
     if (prevDecision.current === null && card.decision !== null) {
         setCollapsed(true);
     }
     prevDecision.current = card.decision;
+
+    const handleAccept = () => {
+        if (card.decision === "accepted" || card.decision === "edited") setCollapsed(true);
+        onAccept();
+    };
+
+    const handleReject = () => {
+        if (card.decision === "rejected") setCollapsed(true);
+        onReject();
+    };
 
     if (collapsed && card.decision !== null) {
         const badge = card.decision === "rejected" ? "Rejected" : "Accepted";
@@ -327,19 +337,28 @@ function StagingCard({
             <div className="echovault-staging-card-actions">
                 <button
                     className={`echovault-staging-action ${card.decision === "accepted" || card.decision === "edited" ? "echovault-staging-action-active-accept" : ""}`}
-                    onClick={onAccept}
+                    onClick={handleAccept}
                 >
                     Accept
                 </button>
                 <button
                     className={`echovault-staging-action ${card.decision === "rejected" ? "echovault-staging-action-active-reject" : ""}`}
-                    onClick={onReject}
+                    onClick={handleReject}
                 >
                     Reject
                 </button>
                 <button className="echovault-staging-action" onClick={onEdit}>
                     {isEditing ? "Done" : "Edit"}
                 </button>
+                {card.decision !== null && (
+                    <button
+                        className="echovault-staging-action echovault-staging-action-collapse"
+                        onClick={() => setCollapsed(true)}
+                        title="Collapse"
+                    >
+                        ▲
+                    </button>
+                )}
             </div>
         </div>
     );
