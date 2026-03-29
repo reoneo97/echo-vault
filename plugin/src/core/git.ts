@@ -60,9 +60,11 @@ async function ensureGitignore(vaultPath: string): Promise<void> {
     }
 
     const lines = content.split("\n");
-    if (!lines.some((line) => line.trim() === ".obsidian")) {
-        const newEntry = content.endsWith("\n") || content === "" ? ".obsidian\n" : "\n.obsidian\n";
-        await writeFile(gitignorePath, content + newEntry, "utf-8");
+    const ignoreEntries = [".obsidian", "EchoVault/"];
+    const missing = ignoreEntries.filter((entry) => !lines.some((line) => line.trim() === entry));
+    if (missing.length > 0) {
+        const suffix = (content.endsWith("\n") || content === "" ? "" : "\n") + missing.join("\n") + "\n";
+        await writeFile(gitignorePath, content + suffix, "utf-8");
     }
 }
 
@@ -161,30 +163,47 @@ export async function gitLog(
     return entries;
 }
 
+export interface FileDiff {
+    path: string;
+    content: string;
+}
+
 export async function gitDiff(
     vaultPath: string,
     commitHash: string
-): Promise<{ diffText: string; changedFiles: string[] }> {
+): Promise<{ files: FileDiff[] }> {
     const commitCount = await gitCommitCount(vaultPath);
     const raw = commitCount <= 1
         ? await run("git", ["show", "--format=", commitHash, "--", "*.md"], vaultPath)
         : await run("git", ["diff", `${commitHash}~1`, commitHash, "--", "*.md"], vaultPath);
 
-    const changedFiles: string[] = [];
-    const addedLines: string[] = [];
+    const fileMap = new Map<string, string[]>();
+    let currentFile: string | null = null;
 
     for (const line of raw.split("\n")) {
         if (line.startsWith("diff --git")) {
             const match = line.match(/b\/(.+)$/);
-            if (match) changedFiles.push(match[1]);
+            if (match) {
+                currentFile = match[1];
+                fileMap.set(currentFile, []);
+            }
         } else if (
+            currentFile &&
             line.startsWith("+") &&
             !line.startsWith("+++") &&
             !line.startsWith("+++ ")
         ) {
-            addedLines.push(line.substring(1));
+            fileMap.get(currentFile)!.push(line.substring(1));
         }
     }
 
-    return { diffText: addedLines.join("\n"), changedFiles };
+    const files: FileDiff[] = [];
+    for (const [path, lines] of fileMap) {
+        const content = lines.join("\n");
+        if (content.trim()) {
+            files.push({ path, content });
+        }
+    }
+
+    return { files };
 }

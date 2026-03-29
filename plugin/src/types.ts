@@ -62,3 +62,54 @@ export interface ImageAttachment {
 export interface GenerateResponse {
     cards: { question: string; answer: string }[];
 }
+
+export interface FileDiffPayload {
+    path: string;
+    diff_content: string;
+    images?: ImageAttachment[];
+}
+
+export interface FileResult {
+    source_note: string;
+    cards: { question: string; answer: string }[];
+}
+
+export interface BatchGenerateResponse {
+    file_results: FileResult[];
+}
+
+// Staging types
+export type StagingDecision = "accepted" | "rejected" | "edited";
+
+export interface StagedCard {
+    tempId: string;
+    question: string;
+    answer: string;
+    sourceNotePath: string;
+    commitHash: string;
+    decision: StagingDecision | null;
+    editedQuestion?: string;
+    editedAnswer?: string;
+}
+
+export interface StagedFileGroup {
+    sourceNote: string;
+    cards: StagedCard[];
+}
+
+export interface GenerationResult {
+    commitHash: string;
+    fileGroups: StagedFileGroup[];
+    totalCards: number;
+}
+
+// Feedback types
+export interface CardFeedbackEntry {
+    question: string;
+    answer: string;
+    source_note: string;
+    commit_hash: string;
+    decision: StagingDecision;
+    edited_question?: string;
+    edited_answer?: string;
+}

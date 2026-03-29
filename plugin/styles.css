@@ -863,6 +863,194 @@
     opacity: 0.9;
 }
 
+/* Staging panel */
+.echovault-staging {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.echovault-staging-header {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.echovault-staging-bulk {
+    display: flex;
+    gap: 8px;
+}
+
+.echovault-staging-bulk .echovault-btn {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.8em;
+}
+
+.echovault-staging-btn-accept-all {
+    background: var(--color-green);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-staging-btn-reject-all {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-staging-summary {
+    display: flex;
+    gap: 10px;
+    font-size: 0.78em;
+}
+
+.echovault-staging-count-accepted { color: var(--color-green); }
+.echovault-staging-count-rejected { color: var(--text-error); }
+.echovault-staging-count-pending { color: var(--text-faint); }
+
+.echovault-staging-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-staging-group {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-staging-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+.echovault-staging-group-header:hover {
+    color: var(--text-normal);
+}
+
+.echovault-staging-group-name {
+    flex: 1;
+    text-align: left;
+    font-family: var(--font-monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-staging-group-count {
+    background: var(--background-modifier-border);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.echovault-staging-cards {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-staging-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border-left: 3px solid transparent;
+}
+
+.echovault-staging-card-accepted {
+    border-left-color: var(--color-green);
+}
+
+.echovault-staging-card-rejected {
+    border-left-color: var(--text-error);
+    opacity: 0.5;
+}
+
+.echovault-staging-q,
+.echovault-staging-a {
+    font-size: 0.85em;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.echovault-staging-a {
+    color: var(--text-muted);
+}
+
+.echovault-staging-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.echovault-staging-textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.85em;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+}
+
+.echovault-staging-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.echovault-staging-action {
+    padding: 3px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75em;
+    cursor: pointer;
+}
+
+.echovault-staging-action:hover {
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+}
+
+.echovault-staging-action-active-accept {
+    background: var(--color-green);
+    color: var(--text-on-accent);
+    border-color: var(--color-green);
+}
+
+.echovault-staging-action-active-reject {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border-color: var(--text-error);
+}
+
+.echovault-staging-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
 /* Review summary */
 .echovault-summary {
     text-align: center;

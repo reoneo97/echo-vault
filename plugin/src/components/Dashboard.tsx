@@ -46,12 +46,11 @@ export function Dashboard({
     const MAX_VISIBLE_FILES = 10;
     const mdFiles = changedFiles.filter((e) => e.file.endsWith(".md"));
 
-    const STAGES: GenerateStage[] = ["committing", "analyzing", "generating", "saving"];
+    const STAGES: GenerateStage[] = ["committing", "analyzing", "generating"];
     const STAGE_LABELS: Record<GenerateStage, string> = {
         committing: "Committing changes...",
         analyzing: "Analyzing diff...",
         generating: "Generating flashcards...",
-        saving: "Saving cards...",
     };
     const stageIndex = generateStage ? STAGES.indexOf(generateStage) : -1;
 

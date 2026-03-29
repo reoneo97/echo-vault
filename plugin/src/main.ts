@@ -1,5 +1,5 @@
 import { Notice, Plugin } from "obsidian";
-import { DEFAULT_SETTINGS, EchoVaultSettings } from "./types";
+import { DEFAULT_SETTINGS, EchoVaultSettings, GenerationResult } from "./types";
 import { EchoVaultSettingTab } from "./settings";
 import { FlashcardStore } from "./core/store";
 import { ReviewLog } from "./core/review-log";
@@ -95,12 +95,11 @@ export default class EchoVaultPlugin extends Plugin {
         throw new Error("Could not determine vault path");
     }
 
-    async commitAndGenerate(onProgress?: (stage: GenerateStage) => void) {
+    async commitAndGenerate(onProgress?: (stage: GenerateStage) => void): Promise<GenerationResult | null> {
         try {
             const vaultPath = this.getVaultPath();
-            await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger, onProgress);
-            this.updateStatusBar();
-            this.refreshSidebar();
+            const result = await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger, onProgress);
+            return result;
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);

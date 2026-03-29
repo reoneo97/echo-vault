@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { EchoVaultSettings, GenerateResponse, ImageAttachment } from "../types";
+import { EchoVaultSettings, GenerateResponse, ImageAttachment, FileDiffPayload, BatchGenerateResponse, CardFeedbackEntry } from "../types";
 
 export async function checkBackendHealth(
     settings: EchoVaultSettings
@@ -33,4 +33,33 @@ export async function generateFlashcards(
         }),
     });
     return res.json as GenerateResponse;
+}
+
+export async function generateFlashcardsBatch(
+    files: FileDiffPayload[],
+    maxCards: number,
+    settings: EchoVaultSettings
+): Promise<BatchGenerateResponse> {
+    const res = await requestUrl({
+        url: `${settings.backendUrl}/generate-flashcards-batch`,
+        method: "POST",
+        contentType: "application/json",
+        body: JSON.stringify({
+            files,
+            max_cards: maxCards,
+        }),
+    });
+    return res.json as BatchGenerateResponse;
+}
+
+export async function sendFeedback(
+    entries: CardFeedbackEntry[],
+    settings: EchoVaultSettings
+): Promise<void> {
+    await requestUrl({
+        url: `${settings.backendUrl}/feedback`,
+        method: "POST",
+        contentType: "application/json",
+        body: JSON.stringify({ entries }),
+    });
 }

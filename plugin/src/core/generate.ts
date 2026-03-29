@@ -1,10 +1,10 @@
 import { Notice, Vault, TFile } from "obsidian";
 import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit } from "./git";
-import { generateFlashcards } from "./api-client";
+import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
-import { EchoVaultSettings, Flashcard, ImageAttachment } from "../types";
-import { generateId, nowISO, getTodayDateString } from "../utils";
+import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup } from "../types";
+import { generateId } from "../utils";
 
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "bmp", "webp"]);
 const MAX_IMAGES = 5;
@@ -102,7 +102,7 @@ async function resolveImages(
     return attachments;
 }
 
-export type GenerateStage = "committing" | "analyzing" | "generating" | "saving";
+export type GenerateStage = "committing" | "analyzing" | "generating";
 
 export async function commitAndGenerate(
     vaultPath: string,
@@ -111,7 +111,7 @@ export async function commitAndGenerate(
     settings: EchoVaultSettings,
     logger?: Logger,
     onProgress?: (stage: GenerateStage) => void
-): Promise<void> {
+): Promise<GenerationResult | null> {
     logger?.info("commitAndGenerate started", { vaultPath });
 
     // Ensure the vault has its own git repo (not a parent's)
@@ -123,7 +123,7 @@ export async function commitAndGenerate(
         const initial = await gitCommit(vaultPath, "Initial commit");
         if (!initial.hasChanges) {
             new Notice("No files to commit.");
-            return;
+            return null;
         }
     }
 
@@ -138,7 +138,7 @@ export async function commitAndGenerate(
     if (!commitResult.hasChanges) {
         logger?.info("No changes to commit");
         new Notice("No changes to commit.");
-        return;
+        return null;
     }
 
     logger?.info("Committed", { hash: commitResult.hash });
@@ -147,80 +147,79 @@ export async function commitAndGenerate(
     if (store.hasCommit(commitResult.hash)) {
         logger?.warn("Duplicate commit skipped", { hash: commitResult.hash });
         new Notice("This commit has already been processed.");
-        return;
+        return null;
     }
 
-    // Get diff
+    // Get per-file diffs
     onProgress?.("analyzing");
-    const { diffText, changedFiles } = await gitDiff(
-        vaultPath,
-        commitResult.hash
-    );
+    const { files } = await gitDiff(vaultPath, commitResult.hash);
 
-    logger?.info("Diff retrieved", { changedFiles, diffLength: diffText.length });
+    logger?.info("Diff retrieved", {
+        fileCount: files.length,
+        files: files.map((f) => f.path),
+    });
 
-    if (!diffText.trim()) {
+    if (files.length === 0) {
         logger?.info("Empty diff, skipping");
         new Notice("No new text content in this commit.");
-        return;
+        return null;
     }
 
-    // Detect and resolve image references in the diff
-    const imageRefs = extractImageRefs(diffText);
-    let images: ImageAttachment[] = [];
-    if (imageRefs.length > 0) {
-        images = await resolveImages(imageRefs, vault);
-        logger?.info("Images resolved", { refs: imageRefs, resolved: images.length });
+    // Resolve images per file
+    const payloads: FileDiffPayload[] = [];
+    for (const file of files) {
+        const imageRefs = extractImageRefs(file.content);
+        let images: ImageAttachment[] = [];
+        if (imageRefs.length > 0) {
+            images = await resolveImages(imageRefs, vault);
+            logger?.info("Images resolved", { file: file.path, refs: imageRefs, resolved: images.length });
+        }
+        payloads.push({
+            path: file.path,
+            diff_content: file.content,
+            ...(images.length > 0 ? { images } : {}),
+        });
     }
 
     // Call backend
     onProgress?.("generating");
-    new Notice(
-        images.length > 0
-            ? `Generating flashcards (${images.length} image${images.length > 1 ? "s" : ""} detected)...`
-            : "Generating flashcards..."
-    );
-    const sourceNote = changedFiles.length > 0 ? changedFiles[0] : "unknown";
+    new Notice(`Generating flashcards from ${files.length} file${files.length > 1 ? "s" : ""}...`);
 
     let response;
     try {
-        response = await generateFlashcards(diffText, sourceNote, settings, images);
+        response = await generateFlashcardsBatch(payloads, settings.maxCardsPerGeneration, settings);
     } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        logger?.error("Backend call failed, reverting commit", { error: msg, sourceNote });
+        logger?.error("Backend call failed, reverting commit", { error: msg });
         await gitResetLastCommit(vaultPath);
         logger?.info("Commit reverted", { hash: commitResult.hash });
         new Notice(`Failed to generate flashcards: ${msg}. Commit reverted — retry when backend is online.`);
-        return;
+        return null;
     }
 
-    if (!response.cards || response.cards.length === 0) {
-        logger?.warn("Backend returned no cards", { sourceNote });
+    // Build staged cards for review
+    const fileGroups: StagedFileGroup[] = [];
+    for (const fileResult of response.file_results) {
+        const cards: StagedCard[] = fileResult.cards.map((c) => ({
+            tempId: generateId(),
+            question: c.question,
+            answer: c.answer,
+            sourceNotePath: fileResult.source_note,
+            commitHash: commitResult.hash,
+            decision: null,
+        }));
+        if (cards.length > 0) {
+            fileGroups.push({ sourceNote: fileResult.source_note, cards });
+        }
+    }
+
+    const totalCards = fileGroups.reduce((sum, fg) => sum + fg.cards.length, 0);
+    if (totalCards === 0) {
+        logger?.warn("Backend returned no cards");
         new Notice("No flashcards were generated from this diff.");
-        return;
+        return null;
     }
 
-    logger?.info("Cards generated", { count: response.cards.length, sourceNote });
-
-    // Save cards
-    onProgress?.("saving");
-    const now = nowISO();
-    const today = getTodayDateString();
-    const newCards: Flashcard[] = response.cards.map((c) => ({
-        id: generateId(),
-        type: "qa" as const,
-        question: c.question,
-        answer: c.answer,
-        sourceNotePath: sourceNote,
-        commitHash: commitResult.hash,
-        createdAt: now,
-        lastReviewedAt: null,
-        repetitions: 0,
-        easinessFactor: 2.5,
-        interval: 0,
-        nextReviewDate: today,
-    }));
-
-    await store.addCards(newCards);
-    new Notice(`Created ${newCards.length} new flashcard(s)!`);
+    logger?.info("Cards generated for staging", { count: totalCards });
+    return { commitHash: commitResult.hash, fileGroups, totalCards };
 }

@@ -27,9 +27,9 @@ src/
 ├── core/                # Business logic (no UI dependencies)
 │   ├── store.ts         # Flashcard CRUD — reads/writes flashcards.json
 │   ├── review-log.ts    # Daily review session tracking
-│   ├── generate.ts      # Commit → diff → detect images → call backend → save cards
-│   ├── git.ts           # Git CLI wrappers (init, commit, log, diff)
-│   ├── api-client.ts    # HTTP calls to backend (health, generate)
+│   ├── generate.ts      # Commit → per-file diffs → images per file → batch backend call → save cards
+│   ├── git.ts           # Git CLI wrappers (init, commit, log, diff) with per-command logging
+│   ├── api-client.ts    # HTTP calls to backend (health, generate, batch generate)
 │   ├── sm2.ts           # SM-2 spaced repetition algorithm
 │   └── logger.ts        # Debug logger — writes to EchoVault/echovault.log
 │

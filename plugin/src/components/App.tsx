@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
-import { Flashcard, CardType } from "../types";
+import { Flashcard, CardType, GenerationResult, CardFeedbackEntry } from "../types";
 import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, StatusEntry } from "../core/git";
-import { checkBackendHealth } from "../core/api-client";
+import { checkBackendHealth, sendFeedback } from "../core/api-client";
 import { GenerateStage } from "../core/generate";
 import { generateId, getTodayDateString, nowISO } from "../utils";
 import { Header } from "./Header";
@@ -14,8 +14,9 @@ import { CreateCard } from "./CreateCard";
 import { GitLog } from "./GitLog";
 import { Tutorial } from "./Tutorial";
 import { EmptyState } from "./EmptyState";
+import { StagingPanel } from "./StagingPanel";
 
-type Panel = "init" | "tutorial" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log";
+type Panel = "init" | "tutorial" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log" | "staging";
 
 const PANEL_LABELS: Record<Panel, string> = {
     init: "Setup",
@@ -26,6 +27,7 @@ const PANEL_LABELS: Record<Panel, string> = {
     browse: "Browse",
     create: "Create",
     "git-log": "History",
+    staging: "Review Cards",
 };
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
@@ -39,6 +41,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [forecast, setForecast] = useState({ tomorrow: 0, thisWeek: 0 });
     const [changedFiles, setChangedFiles] = useState<StatusEntry[]>([]);
     const [generateStage, setGenerateStage] = useState<GenerateStage | null>(null);
+    const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {
@@ -127,15 +130,44 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
 
     const handleCommitAndGenerate = async () => {
         try {
-            await plugin.commitAndGenerate((stage) => setGenerateStage(stage));
+            const result = await plugin.commitAndGenerate((stage) => setGenerateStage(stage));
+            setGenerateStage(null);
+            if (result) {
+                setGenerationResult(result);
+                navigateTo("staging");
+                return;
+            }
         } catch {
-            // If generate fails, re-check backend health
             const healthy = await checkBackendHealth(plugin.settings);
             setBackendOnline(healthy);
         }
         setGenerateStage(null);
         refreshStats();
         refreshChangedFiles();
+    };
+
+    const handleStagingConfirm = async (acceptedCards: Flashcard[], feedback: CardFeedbackEntry[]) => {
+        if (acceptedCards.length > 0) {
+            await plugin.store.addCards(acceptedCards);
+        }
+        try {
+            await sendFeedback(feedback, plugin.settings);
+        } catch {
+            // Feedback is best-effort
+        }
+        setGenerationResult(null);
+        plugin.updateStatusBar();
+        refreshStats();
+        refreshChangedFiles();
+        navigateTo("dashboard");
+        new Notice(`Saved ${acceptedCards.length} card${acceptedCards.length !== 1 ? "s" : ""}`);
+    };
+
+    const handleStagingCancel = () => {
+        setGenerationResult(null);
+        refreshStats();
+        refreshChangedFiles();
+        navigateTo("dashboard");
     };
 
     const handleDeleteRepo = async () => {
@@ -328,6 +360,14 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                             navigateTo("dashboard");
                             new Notice(`Card created — ${stats.total + 1} cards in your collection`);
                         }}
+                    />
+                )}
+
+                {panel === "staging" && generationResult && (
+                    <StagingPanel
+                        generationResult={generationResult}
+                        onConfirm={handleStagingConfirm}
+                        onCancel={handleStagingCancel}
                     />
                 )}
             </div>
