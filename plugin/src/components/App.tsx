@@ -183,6 +183,13 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         }
     };
 
+    const handleDeleteAllCards = async () => {
+        await plugin.store.clearAll();
+        plugin.updateStatusBar();
+        refreshStats();
+        new Notice("All flashcards deleted.");
+    };
+
     const handleAddTestCard = async () => {
         const types: CardType[] = ["qa", "mcq", "tf"];
         const cardType = types[Math.floor(Math.random() * types.length)];
@@ -303,6 +310,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                         onBrowse={() => navigateTo("browse")}
                         onCreate={() => navigateTo("create")}
                         onGitLog={() => navigateTo("git-log")}
+                        onDeleteAllCards={handleDeleteAllCards}
                         onDeleteRepo={handleDeleteRepo}
                     />
                 )}

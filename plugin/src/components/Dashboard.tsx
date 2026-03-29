@@ -18,6 +18,7 @@ interface DashboardProps {
     onBrowse: () => void;
     onCreate: () => void;
     onGitLog: () => void;
+    onDeleteAllCards: () => Promise<void>;
     onDeleteRepo: () => Promise<void>;
 }
 
@@ -36,11 +37,13 @@ export function Dashboard({
     onBrowse,
     onCreate,
     onGitLog,
+    onDeleteAllCards,
     onDeleteRepo,
 }: DashboardProps) {
     const [generating, setGenerating] = useState(false);
     const [checking, setChecking] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [confirmDeleteCards, setConfirmDeleteCards] = useState(false);
     const [filesExpanded, setFilesExpanded] = useState(false);
 
     const MAX_VISIBLE_FILES = 10;
@@ -185,6 +188,34 @@ export function Dashboard({
                 >
                     Add Test Flashcard
                 </button>
+                {!confirmDeleteCards ? (
+                    <button
+                        className="echovault-btn echovault-btn-test"
+                        onClick={() => setConfirmDeleteCards(true)}
+                    >
+                        Delete All Flashcards
+                    </button>
+                ) : (
+                    <div className="echovault-confirm-delete">
+                        <p className="echovault-confirm-warning">
+                            This will permanently delete all flashcards and review progress.
+                        </p>
+                        <div className="echovault-confirm-actions">
+                            <button
+                                className="echovault-btn echovault-btn-danger"
+                                onClick={() => { setConfirmDeleteCards(false); onDeleteAllCards(); }}
+                            >
+                                Yes, Delete All Cards
+                            </button>
+                            <button
+                                className="echovault-btn echovault-btn-show"
+                                onClick={() => setConfirmDeleteCards(false)}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {!confirmDelete ? (
                     <button
                         className="echovault-btn echovault-btn-test"

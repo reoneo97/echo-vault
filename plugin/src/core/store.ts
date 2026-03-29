@@ -79,6 +79,11 @@ export class FlashcardStore {
         await this.save();
     }
 
+    async clearAll(): Promise<void> {
+        this.data = { version: 1, cards: [] };
+        await this.save();
+    }
+
     hasCommit(commitHash: string): boolean {
         return this.data.cards.some((c) => c.commitHash === commitHash);
     }
