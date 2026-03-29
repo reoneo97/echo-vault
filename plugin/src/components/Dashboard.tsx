@@ -109,7 +109,7 @@ export function Dashboard({
                                         <span className={`echovault-file-status echovault-file-status-${entry.status === "??" ? "new" : entry.status.toLowerCase()}`}>
                                             {entry.status === "??" ? "N" : entry.status}
                                         </span>
-                                        <span className="echovault-file-name">{entry.file}</span>
+                                        <span className={`echovault-file-name ${entry.status === "D" ? "echovault-file-deleted" : ""}`}>{entry.file}</span>
                                     </li>
                                 ))}
                                 {mdFiles.length > MAX_VISIBLE_FILES && (

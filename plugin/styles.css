@@ -789,6 +789,11 @@
     color: var(--text-muted);
 }
 
+.echovault-file-deleted {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
 .echovault-file-more {
     color: var(--text-faint);
     font-style: italic;
@@ -954,6 +959,46 @@
     font-size: 0.85em;
 }
 
+.echovault-staging-file-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--background-secondary);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-staging-file-btn {
+    font-size: 0.75em;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.echovault-staging-file-btn:hover {
+    color: var(--text-normal);
+}
+
+.echovault-staging-file-btn-accept:hover {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+.echovault-staging-file-btn-reject:hover {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+.echovault-staging-file-summary {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    font-size: 0.75em;
+}
+
 .echovault-staging-cards {
     padding: 8px;
     display: flex;
@@ -975,6 +1020,46 @@
 .echovault-staging-card-rejected {
     border-left-color: var(--text-error);
     opacity: 0.5;
+}
+
+.echovault-staging-card-collapsed {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--background-modifier-border);
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.echovault-staging-card-collapsed:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-staging-card-collapsed.echovault-staging-card-accepted {
+    border-left-color: var(--interactive-success);
+}
+
+.echovault-staging-card-collapsed.echovault-staging-card-rejected {
+    border-left-color: var(--text-error);
+    opacity: 0.5;
+}
+
+.echovault-staging-collapsed-badge {
+    font-size: 0.75em;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    white-space: nowrap;
+}
+
+.echovault-staging-collapsed-q {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
 }
 
 .echovault-staging-q,

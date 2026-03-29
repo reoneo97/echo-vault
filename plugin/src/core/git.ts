@@ -91,7 +91,7 @@ export async function gitStatus(vaultPath: string): Promise<StatusEntry[]> {
     if (!raw.trim()) return [];
     return raw.trim().split("\n").map((line) => ({
         status: line.substring(0, 2).trim(),
-        file: line.substring(3),
+        file: line.substring(3).replace(/^"|"$/g, ""),
     }));
 }
 

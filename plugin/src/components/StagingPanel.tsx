@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry } from "../types";
 import { generateId, nowISO, getTodayDateString } from "../utils";
 
@@ -107,6 +107,21 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
                 <span>{generationResult.totalCards} card{generationResult.totalCards !== 1 ? "s" : ""} generated</span>
             </div>
 
+            <div className="echovault-staging-bulk">
+                <button
+                    className="echovault-btn echovault-staging-btn-accept-all"
+                    onClick={() => setAllDecisions("accepted")}
+                >
+                    Accept All
+                </button>
+                <button
+                    className="echovault-btn echovault-staging-btn-reject-all"
+                    onClick={() => setAllDecisions("rejected")}
+                >
+                    Reject All
+                </button>
+            </div>
+
             <div className="echovault-staging-summary">
                 {accepted.length > 0 && <span className="echovault-staging-count-accepted">{accepted.length} accepted</span>}
                 {rejected.length > 0 && <span className="echovault-staging-count-rejected">{rejected.length} rejected</span>}
@@ -138,20 +153,6 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
             </div>
 
             <div className="echovault-staging-footer">
-                <div className="echovault-staging-bulk">
-                    <button
-                        className="echovault-btn echovault-staging-btn-accept-all"
-                        onClick={() => setAllDecisions("accepted")}
-                    >
-                        Accept All
-                    </button>
-                    <button
-                        className="echovault-btn echovault-staging-btn-reject-all"
-                        onClick={() => setAllDecisions("rejected")}
-                    >
-                        Reject All
-                    </button>
-                </div>
                 <button
                     className="echovault-btn echovault-btn-primary"
                     onClick={handleConfirm}
@@ -270,11 +271,33 @@ function StagingCard({
     onUpdateQuestion: (q: string) => void;
     onUpdateAnswer: (a: string) => void;
 }) {
+    const [collapsed, setCollapsed] = useState(false);
+
     const decisionClass = card.decision === "accepted" || card.decision === "edited"
         ? "echovault-staging-card-accepted"
         : card.decision === "rejected"
         ? "echovault-staging-card-rejected"
         : "";
+
+    // Auto-collapse when a decision is made
+    const prevDecision = useRef(card.decision);
+    if (prevDecision.current === null && card.decision !== null) {
+        setCollapsed(true);
+    }
+    prevDecision.current = card.decision;
+
+    if (collapsed && card.decision !== null) {
+        const badge = card.decision === "rejected" ? "Rejected" : "Accepted";
+        return (
+            <div
+                className={`echovault-staging-card-collapsed ${decisionClass}`}
+                onClick={() => setCollapsed(false)}
+            >
+                <span className="echovault-staging-collapsed-badge">{badge}</span>
+                <span className="echovault-staging-collapsed-q">{card.editedQuestion ?? card.question}</span>
+            </div>
+        );
+    }
 
     return (
         <div className={`echovault-staging-card ${decisionClass}`}>
