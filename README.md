@@ -17,9 +17,9 @@
 ## How It Works
 
 1. Write or edit notes in Obsidian
-2. Run **Commit & Generate Flashcards** — the plugin commits your vault and extracts the diff
-3. New content is sent to a Python backend which calls an LLM (via OpenRouter) to create flashcards
-4. Cards are stored locally in your vault as JSON
+2. Run **Commit & Generate Flashcards** — the plugin commits your vault and extracts per-file diffs
+3. Each file's new content is sent to a Python backend which calls an LLM in parallel (via OpenRouter) to create flashcards
+4. Cards are stored locally in your vault as JSON, each attributed to its source note
 5. Run **Review Flashcards** to study due cards with spaced repetition scheduling
 
 ## Card Types
@@ -41,7 +41,7 @@ Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI)
 ```
 
 - **Plugin** handles everything local: UI, git, storage, review scheduling
-- **Backend** handles LLM calls only: receives diff text, returns flashcard pairs
+- **Backend** handles LLM calls only: receives per-file diffs, runs parallel LLM calls, returns cards grouped by source file
 - Reviews work fully offline — the backend is only needed for generating new cards
 
 ## Setup
