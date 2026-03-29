@@ -46,6 +46,16 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
         );
     };
 
+    const setGroupDecision = (sourceNote: string, decision: "accepted" | "rejected") => {
+        setGroups((prev) =>
+            prev.map((g) =>
+                g.sourceNote === sourceNote
+                    ? { ...g, cards: g.cards.map((c) => ({ ...c, decision })) }
+                    : g
+            )
+        );
+    };
+
     const toggleGroup = (sourceNote: string) => {
         setExpandedGroups((prev) => {
             const next = new Set(prev);
@@ -97,21 +107,6 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
                 <span>{generationResult.totalCards} card{generationResult.totalCards !== 1 ? "s" : ""} generated</span>
             </div>
 
-            <div className="echovault-staging-bulk">
-                <button
-                    className="echovault-btn echovault-staging-btn-accept-all"
-                    onClick={() => setAllDecisions("accepted")}
-                >
-                    Accept All
-                </button>
-                <button
-                    className="echovault-btn echovault-staging-btn-reject-all"
-                    onClick={() => setAllDecisions("rejected")}
-                >
-                    Reject All
-                </button>
-            </div>
-
             <div className="echovault-staging-summary">
                 {accepted.length > 0 && <span className="echovault-staging-count-accepted">{accepted.length} accepted</span>}
                 {rejected.length > 0 && <span className="echovault-staging-count-rejected">{rejected.length} rejected</span>}
@@ -120,36 +115,43 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
 
             <div className="echovault-staging-groups">
                 {groups.map((group) => (
-                    <div key={group.sourceNote} className="echovault-staging-group">
-                        <button
-                            className="echovault-staging-group-header"
-                            onClick={() => toggleGroup(group.sourceNote)}
-                        >
-                            <span className={`echovault-chevron ${expandedGroups.has(group.sourceNote) ? "echovault-chevron-open" : ""}`}>&#9656;</span>
-                            <span className="echovault-staging-group-name">{group.sourceNote}</span>
-                            <span className="echovault-staging-group-count">{group.cards.length}</span>
-                        </button>
-                        {expandedGroups.has(group.sourceNote) && (
-                            <div className="echovault-staging-cards">
-                                {group.cards.map((card) => (
-                                    <StagingCard
-                                        key={card.tempId}
-                                        card={card}
-                                        isEditing={editingCard === card.tempId}
-                                        onEdit={() => setEditingCard(editingCard === card.tempId ? null : card.tempId)}
-                                        onAccept={() => updateCard(card.tempId, { decision: card.editedQuestion || card.editedAnswer ? "edited" : "accepted" })}
-                                        onReject={() => updateCard(card.tempId, { decision: "rejected" })}
-                                        onUpdateQuestion={(q) => updateCard(card.tempId, { editedQuestion: q })}
-                                        onUpdateAnswer={(a) => updateCard(card.tempId, { editedAnswer: a })}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </div>
+                    <StagingFileCard
+                        key={group.sourceNote}
+                        sourceNote={group.sourceNote}
+                        cards={group.cards}
+                        expanded={expandedGroups.has(group.sourceNote)}
+                        editingCardId={editingCard}
+                        onToggle={() => toggleGroup(group.sourceNote)}
+                        onAcceptAll={() => setGroupDecision(group.sourceNote, "accepted")}
+                        onRejectAll={() => setGroupDecision(group.sourceNote, "rejected")}
+                        onAcceptCard={(tempId) => {
+                            const card = group.cards.find((c) => c.tempId === tempId);
+                            const decision = card?.editedQuestion || card?.editedAnswer ? "edited" : "accepted";
+                            updateCard(tempId, { decision });
+                        }}
+                        onRejectCard={(tempId) => updateCard(tempId, { decision: "rejected" })}
+                        onEditToggle={(tempId) => setEditingCard(editingCard === tempId ? null : tempId)}
+                        onUpdateQuestion={(tempId, q) => updateCard(tempId, { editedQuestion: q })}
+                        onUpdateAnswer={(tempId, a) => updateCard(tempId, { editedAnswer: a })}
+                    />
                 ))}
             </div>
 
             <div className="echovault-staging-footer">
+                <div className="echovault-staging-bulk">
+                    <button
+                        className="echovault-btn echovault-staging-btn-accept-all"
+                        onClick={() => setAllDecisions("accepted")}
+                    >
+                        Accept All
+                    </button>
+                    <button
+                        className="echovault-btn echovault-staging-btn-reject-all"
+                        onClick={() => setAllDecisions("rejected")}
+                    >
+                        Reject All
+                    </button>
+                </div>
                 <button
                     className="echovault-btn echovault-btn-primary"
                     onClick={handleConfirm}
@@ -165,6 +167,88 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
                     Discard All
                 </button>
             </div>
+        </div>
+    );
+}
+
+function StagingFileCard({
+    sourceNote,
+    cards,
+    expanded,
+    editingCardId,
+    onToggle,
+    onAcceptAll,
+    onRejectAll,
+    onAcceptCard,
+    onRejectCard,
+    onEditToggle,
+    onUpdateQuestion,
+    onUpdateAnswer,
+}: {
+    sourceNote: string;
+    cards: StagedCard[];
+    expanded: boolean;
+    editingCardId: string | null;
+    onToggle: () => void;
+    onAcceptAll: () => void;
+    onRejectAll: () => void;
+    onAcceptCard: (tempId: string) => void;
+    onRejectCard: (tempId: string) => void;
+    onEditToggle: (tempId: string) => void;
+    onUpdateQuestion: (tempId: string, q: string) => void;
+    onUpdateAnswer: (tempId: string, a: string) => void;
+}) {
+    const accepted = cards.filter((c) => c.decision === "accepted" || c.decision === "edited").length;
+    const rejected = cards.filter((c) => c.decision === "rejected").length;
+
+    return (
+        <div className="echovault-staging-group">
+            <button
+                className="echovault-staging-group-header"
+                onClick={onToggle}
+            >
+                <span className={`echovault-chevron ${expanded ? "echovault-chevron-open" : ""}`}>&#9656;</span>
+                <span className="echovault-staging-group-name">{sourceNote}</span>
+                <span className="echovault-staging-group-count">{cards.length}</span>
+            </button>
+            {expanded && (
+                <>
+                    <div className="echovault-staging-file-actions">
+                        <button
+                            className="echovault-staging-file-btn echovault-staging-file-btn-accept"
+                            onClick={(e) => { e.stopPropagation(); onAcceptAll(); }}
+                        >
+                            Accept All ({cards.length})
+                        </button>
+                        <button
+                            className="echovault-staging-file-btn echovault-staging-file-btn-reject"
+                            onClick={(e) => { e.stopPropagation(); onRejectAll(); }}
+                        >
+                            Reject All ({cards.length})
+                        </button>
+                        {(accepted > 0 || rejected > 0) && (
+                            <span className="echovault-staging-file-summary">
+                                {accepted > 0 && <span className="echovault-staging-count-accepted">{accepted}✓</span>}
+                                {rejected > 0 && <span className="echovault-staging-count-rejected">{rejected}✗</span>}
+                            </span>
+                        )}
+                    </div>
+                    <div className="echovault-staging-cards">
+                        {cards.map((card) => (
+                            <StagingCard
+                                key={card.tempId}
+                                card={card}
+                                isEditing={editingCardId === card.tempId}
+                                onEdit={() => onEditToggle(card.tempId)}
+                                onAccept={() => onAcceptCard(card.tempId)}
+                                onReject={() => onRejectCard(card.tempId)}
+                                onUpdateQuestion={(q) => onUpdateQuestion(card.tempId, q)}
+                                onUpdateAnswer={(a) => onUpdateAnswer(card.tempId, a)}
+                            />
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
     );
 }
