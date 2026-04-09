@@ -1,7 +1,12 @@
+export type CardType = "standard" | "true_false" | "multiple_choice";
+
 export interface Flashcard {
     id: string;
+    type: CardType;
     question: string;
     answer: string;
+    options?: string[];       // MCQ: list of choices
+    correctAnswer?: string;   // MCQ: correct option text, T/F: "true" or "false"
     sourceNotePath: string;
     commitHash: string;
     createdAt: string;
@@ -31,6 +36,14 @@ export const DEFAULT_SETTINGS: EchoVaultSettings = {
     maxCardsPerGeneration: 10,
 };
 
+export interface GenerateResponseCard {
+    type?: CardType;
+    question: string;
+    answer: string;
+    options?: string[];
+    correct_answer?: string;
+}
+
 export interface GenerateResponse {
-    cards: { question: string; answer: string }[];
+    cards: GenerateResponseCard[];
 }

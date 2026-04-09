@@ -35,6 +35,12 @@ export class FlashcardStore {
         try {
             const raw = await adapter.read(this.filePath);
             this.data = JSON.parse(raw) as FlashcardData;
+            // Migrate cards without a type field to "standard"
+            for (const card of this.data.cards) {
+                if (!card.type) {
+                    card.type = "standard";
+                }
+            }
         } catch {
             this.data = { version: 1, cards: [] };
             await this.save();

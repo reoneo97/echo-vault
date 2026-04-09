@@ -72,19 +72,31 @@ export async function commitAndGenerate(
     // Create Flashcard objects
     const now = nowISO();
     const today = getTodayDateString();
-    const newCards: Flashcard[] = response.cards.map((c) => ({
-        id: generateId(),
-        question: c.question,
-        answer: c.answer,
-        sourceNotePath: sourceNote,
-        commitHash: commitResult.hash,
-        createdAt: now,
-        lastReviewedAt: null,
-        repetitions: 0,
-        easinessFactor: 2.5,
-        interval: 0,
-        nextReviewDate: today,
-    }));
+    const newCards: Flashcard[] = response.cards.map((c) => {
+        const type = c.type ?? "standard";
+        const card: Flashcard = {
+            id: generateId(),
+            type,
+            question: c.question,
+            answer: c.answer,
+            sourceNotePath: sourceNote,
+            commitHash: commitResult.hash,
+            createdAt: now,
+            lastReviewedAt: null,
+            repetitions: 0,
+            easinessFactor: 2.5,
+            interval: 0,
+            nextReviewDate: today,
+        };
+        if (type === "multiple_choice" && c.options) {
+            card.options = c.options;
+            card.correctAnswer = c.correct_answer ?? c.answer;
+        }
+        if (type === "true_false") {
+            card.correctAnswer = c.correct_answer ?? c.answer;
+        }
+        return card;
+    });
 
     await store.addCards(newCards);
     new Notice(`Created ${newCards.length} new flashcard(s)!`);

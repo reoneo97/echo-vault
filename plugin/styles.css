@@ -149,6 +149,88 @@
     border-color: var(--color-green);
 }
 
+/* Card type badge */
+.echovault-card-type-badge {
+    display: inline-block;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+/* True/False options */
+.echovault-tf-options {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.echovault-btn-tf {
+    flex: 1;
+    padding: 12px;
+    font-size: 1em;
+    font-weight: 600;
+}
+
+/* Multiple choice options */
+.echovault-mcq-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.echovault-mcq-option {
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--interactive-normal);
+    cursor: pointer;
+    line-height: 1.4;
+}
+
+.echovault-mcq-option:hover {
+    background: var(--interactive-hover);
+}
+
+.echovault-mcq-option-disabled {
+    cursor: default;
+    pointer-events: none;
+}
+
+.echovault-mcq-option-correct {
+    border-color: var(--color-green);
+    background: rgba(0, 200, 83, 0.15);
+}
+
+.echovault-mcq-option-incorrect {
+    border-color: var(--text-error);
+    background: rgba(255, 0, 0, 0.1);
+}
+
+/* Answer feedback */
+.echovault-feedback {
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.echovault-feedback-correct {
+    background: rgba(0, 200, 83, 0.15);
+    color: var(--color-green);
+}
+
+.echovault-feedback-incorrect {
+    background: rgba(255, 0, 0, 0.1);
+    color: var(--text-error);
+}
+
 /* Complete screen */
 .echovault-complete {
     text-align: center;
