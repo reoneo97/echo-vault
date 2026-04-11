@@ -26,6 +26,22 @@ templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 
 router = APIRouter()
 
+MAX_RETRIES = 2
+RETRY_BASE_DELAY = 0.5  # seconds
+
+async def generate_with_retry(f, path: str) -> list:
+    last_exc: Exception | None = None
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            return await f()
+        except Exception as e:
+            last_exc = e
+            if attempt < MAX_RETRIES:
+                delay = RETRY_BASE_DELAY * (2 ** attempt)
+                logger.warning("Retrying file=%s (attempt %d/%d) after %.1fs: %s", path, attempt + 1, MAX_RETRIES, delay, e)
+                await asyncio.sleep(delay)
+    raise last_exc
+
 
 @router.get("/health")
 async def health():
@@ -100,11 +116,14 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
 
     start = time.time()
     tasks = [
-        generate_cards_from_diff(
-            diff_content=f.diff_content,
-            source_note=f.path,
-            max_cards=budget,
-            images=f.images if f.images else None,
+        generate_with_retry(
+            lambda f=f, budget=budget: generate_cards_from_diff(
+                diff_content=f.diff_content,
+                source_note=f.path,
+                max_cards=budget,
+                images=f.images if f.images else None,
+            ),
+            path=f.path,
         )
         for f, budget in zip(valid_files, budgets)
     ]
@@ -114,8 +133,8 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     file_results: list[FileResultEntry] = []
     for f, result in zip(valid_files, results):
         if isinstance(result, Exception):
-            logger.error("Generate failed for file=%s: %s", f.path, result)
-            file_results.append(FileResultEntry(source_note=f.path, cards=[]))
+            logger.error("Generate failed for file=%s after %d retries: %s", f.path, MAX_RETRIES, result)
+            file_results.append(FileResultEntry(source_note=f.path, cards=[], error=str(result)))
         else:
             file_results.append(FileResultEntry(source_note=f.path, cards=result))
 

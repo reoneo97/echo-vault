@@ -72,6 +72,7 @@ export interface FileDiffPayload {
 export interface FileResult {
     source_note: string;
     cards: { question: string; answer: string }[];
+    error?: string;
 }
 
 export interface BatchGenerateResponse {

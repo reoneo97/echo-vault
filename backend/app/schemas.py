@@ -37,6 +37,7 @@ class BatchGenerateRequest(BaseModel):
 class FileResultEntry(BaseModel):
     source_note: str
     cards: list[FlashcardPair]
+    error: str | None = None
 
 
 class BatchGenerateResponse(BaseModel):

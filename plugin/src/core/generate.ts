@@ -183,7 +183,7 @@ export async function commitAndGenerate(
 
     // Call backend
     onProgress?.("generating");
-    new Notice(`Generating flashcards from ${files.length} file${files.length > 1 ? "s" : ""}...`);
+    new Notice(`Generating flashcards from ${files.length} file${files.length > 1 ? "s" : ""}... (this may take a moment)`);
 
     let response;
     try {
@@ -195,6 +195,14 @@ export async function commitAndGenerate(
         logger?.info("Commit reverted", { hash: commitResult.hash });
         new Notice(`Failed to generate flashcards: ${msg}. Commit reverted — retry when backend is online.`);
         return null;
+    }
+
+    // Notify user of any files that failed after retries
+    const failedFiles = response.file_results.filter((fr) => fr.error);
+    if (failedFiles.length > 0) {
+        const names = failedFiles.map((fr) => fr.source_note.split("/").pop()).join(", ");
+        logger?.warn("Some files failed after retries", { files: failedFiles.map((fr) => fr.source_note) });
+        new Notice(`${failedFiles.length} file${failedFiles.length > 1 ? "s" : ""} failed to generate cards: ${names}`);
     }
 
     // Build staged cards for review

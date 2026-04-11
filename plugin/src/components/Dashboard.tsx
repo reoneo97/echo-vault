@@ -46,6 +46,7 @@ export function Dashboard({
     const [confirmDeleteCards, setConfirmDeleteCards] = useState(false);
     const [filesExpanded, setFilesExpanded] = useState(false);
 
+    const todayStats = reviewLog.getTodayStats();
     const MAX_VISIBLE_FILES = 10;
     const mdFiles = changedFiles.filter((e) => e.file.endsWith(".md"));
 
@@ -76,6 +77,20 @@ export function Dashboard({
                 <StatCard label="Due now" value={stats.due} />
                 <StatCard label="Streak" value={streak} icon={streak > 3 ? "\uD83D\uDD25" : undefined} />
             </div>
+
+            {todayStats.reviewed > 0 && (
+                <div className="echovault-today-stats">
+                    <span className="echovault-today-stat">
+                        <strong>{todayStats.reviewed}</strong> reviewed today
+                    </span>
+                    <span className="echovault-today-stat">
+                        <strong>{todayStats.correct}</strong> correct
+                    </span>
+                    <span className="echovault-today-stat">
+                        avg rating <strong>{todayStats.avgRating}</strong>
+                    </span>
+                </div>
+            )}
 
             {(forecast.tomorrow > 0 || forecast.thisWeek > 0) && (
                 <div className="echovault-forecast">

@@ -231,6 +231,22 @@
     color: var(--text-normal);
 }
 
+.echovault-today-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.echovault-today-stat strong {
+    color: var(--text-normal);
+}
+
 /* Review heatmap */
 .echovault-heatmap {
     margin-bottom: 16px;
