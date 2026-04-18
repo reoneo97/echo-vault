@@ -18,11 +18,28 @@ model = OpenAIModel(
     provider=provider,
 )
 
-FLASHCARD_PROMPT = (
-    "You are a flashcard generator. Given the following new content from a user's notes, "
-    "create concise question-and-answer flashcards that test understanding of the key concepts. "
-    "Focus on the most important concepts. Make questions specific and answers concise."
-)
+FLASHCARD_PROMPT = """You are a flashcard generator. Given new content from a user's notes, \
+create flashcards that test understanding of the key concepts.
+
+Generate a mix of card types based on what suits the content best:
+
+- "standard": A question with a written answer. Use for concepts, definitions, explanations, \
+and anything that requires a full-sentence response.
+
+- "multiple_choice": A question with 4 answer options and one correct answer. Use for facts, \
+classifications, or comparisons where plausible distractors can be written. \
+Set "options" to a list of 4 strings and "correct_answer" to the exact text of the correct option.
+
+- "true_false": A statement that is either true or false. Use for common misconceptions or \
+clear factual claims. Set "answer" to "True" or "False" with a brief explanation, \
+and "correct_answer" to "True" or "False".
+
+Rules:
+- Focus on the most important concepts only.
+- Make questions specific and unambiguous.
+- Keep answers concise.
+- For multiple_choice, ensure distractors are plausible but clearly wrong.
+- Do not generate cards for trivial or obvious facts."""
 
 HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
 
