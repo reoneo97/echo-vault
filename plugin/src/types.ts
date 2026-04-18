@@ -71,7 +71,13 @@ export interface FileDiffPayload {
 
 export interface FileResult {
     source_note: string;
-    cards: { question: string; answer: string }[];
+    cards: {
+        type?: "standard" | "true_false" | "multiple_choice";
+        question: string;
+        answer: string;
+        options?: string[];
+        correct_answer?: string;
+    }[];
     error?: string;
 }
 
