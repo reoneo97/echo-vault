@@ -28,19 +28,23 @@ router = APIRouter()
 
 MAX_RETRIES = 2
 RETRY_BASE_DELAY = 0.5  # seconds
+MAX_CONCURRENT_LLM = 5  # max parallel LLM calls per batch request
+
+_semaphore = asyncio.Semaphore(MAX_CONCURRENT_LLM)
 
 async def generate_with_retry(f, path: str) -> list:
-    last_exc: Exception | None = None
-    for attempt in range(MAX_RETRIES + 1):
-        try:
-            return await f()
-        except Exception as e:
-            last_exc = e
-            if attempt < MAX_RETRIES:
-                delay = RETRY_BASE_DELAY * (2 ** attempt)
-                logger.warning("Retrying file=%s (attempt %d/%d) after %.1fs: %s", path, attempt + 1, MAX_RETRIES, delay, e)
-                await asyncio.sleep(delay)
-    raise last_exc
+    async with _semaphore:
+        last_exc: Exception | None = None
+        for attempt in range(MAX_RETRIES + 1):
+            try:
+                return await f()
+            except Exception as e:
+                last_exc = e
+                if attempt < MAX_RETRIES:
+                    delay = RETRY_BASE_DELAY * (2 ** attempt)
+                    logger.warning("Retrying file=%s (attempt %d/%d) after %.1fs: %s", path, attempt + 1, MAX_RETRIES, delay, e)
+                    await asyncio.sleep(delay)
+        raise last_exc
 
 
 @router.get("/health")

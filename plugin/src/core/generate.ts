@@ -1,5 +1,5 @@
 import { Notice, Vault, TFile } from "obsidian";
-import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit } from "./git";
+import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit, gitHasCommits } from "./git";
 import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
@@ -119,7 +119,19 @@ export async function commitAndGenerate(
         logger?.info("No git repo found, initializing");
         new Notice("Initializing git repository in vault...");
         await gitInit(vaultPath);
-        // Need an initial commit first
+    }
+
+    // If the repo already has commits (e.g. user brought an existing git vault),
+    // git init is safe — it preserves all history. But we skip the auto-initial-commit
+    // so we don't process the entire history; instead we only generate from new changes.
+    const hasCommits = await gitHasCommits(vaultPath);
+
+    // Commit current changes
+    onProgress?.("committing");
+    new Notice("Committing vault changes...");
+
+    // If repo has no commits yet (fresh init), make an initial commit first
+    if (!hasCommits) {
         const initial = await gitCommit(vaultPath, "Initial commit");
         if (!initial.hasChanges) {
             new Notice("No files to commit.");
@@ -127,9 +139,6 @@ export async function commitAndGenerate(
         }
     }
 
-    // Commit current changes
-    onProgress?.("committing");
-    new Notice("Committing vault changes...");
     const commitResult = await gitCommit(
         vaultPath,
         `EchoVault: ${new Date().toLocaleString()}`
@@ -181,44 +190,64 @@ export async function commitAndGenerate(
         });
     }
 
-    // Call backend
+    // Call backend in chunks to avoid overwhelming the API for large vaults
+    const CHUNK_SIZE = 20;
+    const chunks: FileDiffPayload[][] = [];
+    for (let i = 0; i < payloads.length; i += CHUNK_SIZE) {
+        chunks.push(payloads.slice(i, i + CHUNK_SIZE));
+    }
+
     onProgress?.("generating");
-    new Notice(`Generating flashcards from ${files.length} file${files.length > 1 ? "s" : ""}... (this may take a moment)`);
+    const totalFiles = files.length;
+    const isLargeVault = chunks.length > 1;
 
-    let response;
-    try {
-        response = await generateFlashcardsBatch(payloads, settings.maxCardsPerGeneration, settings);
-    } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : String(e);
-        logger?.error("Backend call failed, reverting commit", { error: msg });
-        await gitResetLastCommit(vaultPath);
-        logger?.info("Commit reverted", { hash: commitResult.hash });
-        new Notice(`Failed to generate flashcards: ${msg}. Commit reverted — retry when backend is online.`);
-        return null;
-    }
-
-    // Notify user of any files that failed after retries
-    const failedFiles = response.file_results.filter((fr) => fr.error);
-    if (failedFiles.length > 0) {
-        const names = failedFiles.map((fr) => fr.source_note.split("/").pop()).join(", ");
-        logger?.warn("Some files failed after retries", { files: failedFiles.map((fr) => fr.source_note) });
-        new Notice(`${failedFiles.length} file${failedFiles.length > 1 ? "s" : ""} failed to generate cards: ${names}`);
-    }
-
-    // Build staged cards for review
     const fileGroups: StagedFileGroup[] = [];
-    for (const fileResult of response.file_results) {
-        const cards: StagedCard[] = fileResult.cards.map((c) => ({
-            tempId: generateId(),
-            question: c.question,
-            answer: c.answer,
-            sourceNotePath: fileResult.source_note,
-            commitHash: commitResult.hash,
-            decision: null,
-        }));
-        if (cards.length > 0) {
-            fileGroups.push({ sourceNote: fileResult.source_note, cards });
+    let totalFailures = 0;
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        if (isLargeVault) {
+            new Notice(`Generating flashcards... (batch ${i + 1}/${chunks.length}, files ${i * CHUNK_SIZE + 1}–${Math.min((i + 1) * CHUNK_SIZE, totalFiles)} of ${totalFiles})`);
+        } else {
+            new Notice(`Generating flashcards from ${totalFiles} file${totalFiles > 1 ? "s" : ""}... (this may take a moment)`);
         }
+
+        let response;
+        try {
+            response = await generateFlashcardsBatch(chunk, settings.maxCardsPerGeneration, settings);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            logger?.error("Backend call failed, reverting commit", { error: msg });
+            await gitResetLastCommit(vaultPath);
+            logger?.info("Commit reverted", { hash: commitResult.hash });
+            new Notice(`Failed to generate flashcards: ${msg}. Commit reverted — retry when backend is online.`);
+            return null;
+        }
+
+        // Collect failures
+        const failedFiles = response.file_results.filter((fr) => fr.error);
+        totalFailures += failedFiles.length;
+        if (failedFiles.length > 0) {
+            logger?.warn("Some files failed after retries", { files: failedFiles.map((fr) => fr.source_note) });
+        }
+
+        for (const fileResult of response.file_results) {
+            const cards: StagedCard[] = fileResult.cards.map((c) => ({
+                tempId: generateId(),
+                question: c.question,
+                answer: c.answer,
+                sourceNotePath: fileResult.source_note,
+                commitHash: commitResult.hash,
+                decision: null,
+            }));
+            if (cards.length > 0) {
+                fileGroups.push({ sourceNote: fileResult.source_note, cards });
+            }
+        }
+    }
+
+    if (totalFailures > 0) {
+        new Notice(`${totalFailures} file${totalFailures > 1 ? "s" : ""} failed to generate cards after retries.`);
     }
 
     const totalCards = fileGroups.reduce((sum, fg) => sum + fg.cards.length, 0);

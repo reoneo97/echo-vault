@@ -50,6 +50,16 @@ export async function gitInit(vaultPath: string): Promise<void> {
     await ensureGitignore(vaultPath);
 }
 
+/** Returns true if the repo has at least one commit (safe to diff against HEAD). */
+export async function gitHasCommits(vaultPath: string): Promise<boolean> {
+    try {
+        await run("git", ["rev-parse", "HEAD"], vaultPath);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 async function ensureGitignore(vaultPath: string): Promise<void> {
     const gitignorePath = join(vaultPath, ".gitignore");
     let content = "";
