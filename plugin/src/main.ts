@@ -5,7 +5,7 @@ import { FlashcardStore } from "./core/store";
 import { ReviewLog } from "./core/review-log";
 import { Logger } from "./core/logger";
 import { checkBackendHealth } from "./core/api-client";
-import { commitAndGenerate, GenerateStage } from "./core/generate";
+import { commitAndGenerate, forceGenerateFromFile, importVault, GenerateStage } from "./core/generate";
 import { setGitLogger } from "./core/git";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
@@ -46,6 +46,25 @@ export default class EchoVaultPlugin extends Plugin {
             id: "open-sidebar",
             name: "Open EchoVault Panel",
             callback: () => this.activateSidebar(),
+        });
+
+        this.addCommand({
+            id: "import-vault",
+            name: "Import All Notes (Generate Cards from Entire Vault)",
+            callback: () => this.importVault(),
+        });
+
+        this.addCommand({
+            id: "force-regenerate-active-file",
+            name: "Regenerate Cards from Active File",
+            checkCallback: (checking) => {
+                const file = this.app.workspace.getActiveFile();
+                if (file && file.extension === "md") {
+                    if (!checking) this.forceRegenerateFromFile(file.path);
+                    return true;
+                }
+                return false;
+            },
         });
 
         // Ribbon icon opens the sidebar
@@ -104,6 +123,30 @@ export default class EchoVaultPlugin extends Plugin {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);
             this.logger.error("commitAndGenerate failed", { error: msg });
+            throw e;
+        }
+    }
+
+    async forceRegenerateFromFile(filePath: string): Promise<GenerationResult | null> {
+        try {
+            const vaultPath = this.getVaultPath();
+            return await forceGenerateFromFile(filePath, vaultPath, this.app.vault, this.store, this.settings, this.logger);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            new Notice(`EchoVault error: ${msg}`);
+            this.logger.error("forceRegenerateFromFile failed", { error: msg });
+            throw e;
+        }
+    }
+
+    async importVault(): Promise<GenerationResult | null> {
+        try {
+            const vaultPath = this.getVaultPath();
+            return await importVault(vaultPath, this.app.vault, this.store, this.settings, this.logger);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            new Notice(`EchoVault error: ${msg}`);
+            this.logger.error("importVault failed", { error: msg });
             throw e;
         }
     }

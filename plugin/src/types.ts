@@ -35,6 +35,10 @@ export type Flashcard = QAFlashcard | MCQFlashcard | TFFlashcard;
 export interface FlashcardData {
     version: number;
     cards: Flashcard[];
+    /** filePath → contentHash of last processed diff, for deduplication. */
+    processedFiles: Record<string, string>;
+    /** Paths of notes not yet imported, populated on first EchoVault use. */
+    importQueue: string[];
 }
 
 export interface EchoVaultSettings {
@@ -97,6 +101,13 @@ export interface StagedCard {
     decision: StagingDecision | null;
     editedQuestion?: string;
     editedAnswer?: string;
+    /** Set if this card's question is similar to an existing card. */
+    duplicateOf?: string;
+    // Card type fields carried from backend response
+    cardType: CardType;
+    choices?: string[];       // MCQ only
+    correctIndex?: number;    // MCQ only
+    correctValue?: boolean;   // T/F only
 }
 
 export interface StagedFileGroup {
@@ -108,6 +119,7 @@ export interface GenerationResult {
     commitHash: string;
     fileGroups: StagedFileGroup[];
     totalCards: number;
+    processedFiles: { path: string; contentHash: string }[];
 }
 
 // Feedback types

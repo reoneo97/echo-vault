@@ -1,14 +1,17 @@
 import { useState, useRef } from "react";
+import { App } from "obsidian";
 import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry } from "../types";
 import { generateId, nowISO, getTodayDateString } from "../utils";
+import { MarkdownText } from "./MarkdownText";
 
 interface StagingPanelProps {
+    app: App;
     generationResult: GenerationResult;
     onConfirm: (acceptedCards: Flashcard[], feedback: CardFeedbackEntry[]) => Promise<void>;
     onCancel: () => void;
 }
 
-export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingPanelProps) {
+export function StagingPanel({ app, generationResult, onConfirm, onCancel }: StagingPanelProps) {
     const [groups, setGroups] = useState<StagedFileGroup[]>(
         () => generationResult.fileGroups.map((fg) => ({
             ...fg,
@@ -70,20 +73,28 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
         const now = nowISO();
         const today = getTodayDateString();
 
-        const acceptedCards: Flashcard[] = accepted.map((c) => ({
-            id: generateId(),
-            type: "qa" as const,
-            question: c.editedQuestion ?? c.question,
-            answer: c.editedAnswer ?? c.answer,
-            sourceNotePath: c.sourceNotePath,
-            commitHash: c.commitHash,
-            createdAt: now,
-            lastReviewedAt: null,
-            repetitions: 0,
-            easinessFactor: 2.5,
-            interval: 0,
-            nextReviewDate: today,
-        }));
+        const acceptedCards: Flashcard[] = accepted.map((c) => {
+            const base = {
+                id: generateId(),
+                question: c.editedQuestion ?? c.question,
+                answer: c.editedAnswer ?? c.answer,
+                sourceNotePath: c.sourceNotePath,
+                commitHash: c.commitHash,
+                createdAt: now,
+                lastReviewedAt: null,
+                repetitions: 0,
+                easinessFactor: 2.5,
+                interval: 0,
+                nextReviewDate: today,
+            };
+            if (c.cardType === "mcq" && c.choices && c.correctIndex !== undefined) {
+                return { ...base, type: "mcq" as const, choices: c.choices, correctIndex: c.correctIndex };
+            }
+            if (c.cardType === "tf" && c.correctValue !== undefined) {
+                return { ...base, type: "tf" as const, correctValue: c.correctValue };
+            }
+            return { ...base, type: "qa" as const };
+        });
 
         const feedback: CardFeedbackEntry[] = allCards
             .filter((c) => c.decision !== null)
@@ -132,6 +143,7 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
                 {groups.map((group) => (
                     <StagingFileCard
                         key={group.sourceNote}
+                        app={app}
                         sourceNote={group.sourceNote}
                         cards={group.cards}
                         expanded={expandedGroups.has(group.sourceNote)}
@@ -173,6 +185,7 @@ export function StagingPanel({ generationResult, onConfirm, onCancel }: StagingP
 }
 
 function StagingFileCard({
+    app,
     sourceNote,
     cards,
     expanded,
@@ -186,6 +199,7 @@ function StagingFileCard({
     onUpdateQuestion,
     onUpdateAnswer,
 }: {
+    app: App;
     sourceNote: string;
     cards: StagedCard[];
     expanded: boolean;
@@ -238,6 +252,7 @@ function StagingFileCard({
                         {cards.map((card) => (
                             <StagingCard
                                 key={card.tempId}
+                                app={app}
                                 card={card}
                                 isEditing={editingCardId === card.tempId}
                                 onEdit={() => onEditToggle(card.tempId)}
@@ -255,6 +270,7 @@ function StagingFileCard({
 }
 
 function StagingCard({
+    app,
     card,
     isEditing,
     onEdit,
@@ -263,6 +279,7 @@ function StagingCard({
     onUpdateQuestion,
     onUpdateAnswer,
 }: {
+    app: App;
     card: StagedCard;
     isEditing: boolean;
     onEdit: () => void;
@@ -330,8 +347,19 @@ function StagingCard({
                 </>
             ) : (
                 <>
-                    <div className="echovault-staging-q"><strong>Q:</strong> {card.editedQuestion ?? card.question}</div>
-                    <div className="echovault-staging-a"><strong>A:</strong> {card.editedAnswer ?? card.answer}</div>
+                    {card.duplicateOf && (
+                        <div className="echovault-staging-duplicate-warning">
+                            Possible duplicate of: <em>{card.duplicateOf}</em>
+                        </div>
+                    )}
+                    <div className="echovault-staging-q">
+                        <strong>Q:</strong>
+                        <MarkdownText app={app} markdown={card.editedQuestion ?? card.question} sourcePath={card.sourceNotePath} className="echovault-md" />
+                    </div>
+                    <div className="echovault-staging-a">
+                        <strong>A:</strong>
+                        <MarkdownText app={app} markdown={card.editedAnswer ?? card.answer} sourcePath={card.sourceNotePath} className="echovault-md" />
+                    </div>
                 </>
             )}
             <div className="echovault-staging-card-actions">

@@ -50,6 +50,16 @@ export async function gitInit(vaultPath: string): Promise<void> {
     await ensureGitignore(vaultPath);
 }
 
+/** Returns true if any EchoVault commit exists in the repo history. */
+export async function gitHasEchoVaultCommits(vaultPath: string): Promise<boolean> {
+    try {
+        const result = await run("git", ["log", "--oneline", "--grep=EchoVault:", "-1"], vaultPath);
+        return result.trim().length > 0;
+    } catch {
+        return false;
+    }
+}
+
 /** Returns true if the repo has at least one commit (safe to diff against HEAD). */
 export async function gitHasCommits(vaultPath: string): Promise<boolean> {
     try {
@@ -80,6 +90,12 @@ async function ensureGitignore(vaultPath: string): Promise<void> {
 
 export async function gitResetLastCommit(vaultPath: string): Promise<void> {
     await run("git", ["reset", "--soft", "HEAD~1"], vaultPath);
+}
+
+/** Creates an empty commit (no file changes) and returns the new commit hash. */
+export async function gitCommitAllowEmpty(vaultPath: string, message: string): Promise<string> {
+    await run("git", ["commit", "--allow-empty", "-m", message], vaultPath);
+    return (await run("git", ["rev-parse", "HEAD"], vaultPath)).trim();
 }
 
 export async function gitCommitCount(vaultPath: string): Promise<number> {

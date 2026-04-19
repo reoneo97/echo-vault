@@ -2,7 +2,7 @@ import { Vault } from "obsidian";
 import { Flashcard, FlashcardData, EchoVaultSettings } from "../types";
 import { getTodayDateString } from "../utils";
 
-const EMPTY_DATA: FlashcardData = { version: 1, cards: [] };
+const EMPTY_DATA: FlashcardData = { version: 1, cards: [], processedFiles: {}, importQueue: [] };
 
 export class FlashcardStore {
     private data: FlashcardData = { ...EMPTY_DATA, cards: [] };
@@ -34,9 +34,11 @@ export class FlashcardStore {
 
         try {
             const raw = await adapter.read(this.filePath);
-            this.data = JSON.parse(raw) as FlashcardData;
+            const parsed = JSON.parse(raw) as FlashcardData;
+            // Migrate older data missing newer fields
+            this.data = { processedFiles: {}, importQueue: [], ...parsed };
         } catch {
-            this.data = { version: 1, cards: [] };
+            this.data = { version: 1, cards: [], processedFiles: {} };
             await this.save();
         }
     }
@@ -80,7 +82,36 @@ export class FlashcardStore {
     }
 
     async clearAll(): Promise<void> {
-        this.data = { version: 1, cards: [] };
+        this.data = { ...EMPTY_DATA, cards: [] };
+        await this.save();
+    }
+
+    hasProcessedFile(filePath: string, contentHash: string): boolean {
+        return this.data.processedFiles[filePath] === contentHash;
+    }
+
+    async recordProcessedFiles(files: { path: string; contentHash: string }[]): Promise<void> {
+        const paths = new Set(files.map((f) => f.path));
+        for (const f of files) {
+            this.data.processedFiles[f.path] = f.contentHash;
+        }
+        this.data.importQueue = this.data.importQueue.filter((p) => !paths.has(p));
+        await this.save();
+    }
+
+    getImportQueue(): string[] {
+        return this.data.importQueue;
+    }
+
+    async initImportQueue(paths: string[]): Promise<void> {
+        if (this.data.importQueue.length > 0) return;
+        this.data.importQueue = [...paths];
+        await this.save();
+    }
+
+    async removeFromImportQueue(paths: string[]): Promise<void> {
+        const set = new Set(paths);
+        this.data.importQueue = this.data.importQueue.filter((p) => !set.has(p));
         await this.save();
     }
 

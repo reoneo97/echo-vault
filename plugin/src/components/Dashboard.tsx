@@ -20,6 +20,11 @@ interface DashboardProps {
     onGitLog: () => void;
     onDeleteAllCards: () => Promise<void>;
     onDeleteRepo: () => Promise<void>;
+    onOpenDataFolder: () => void;
+    onForceRegenerate: () => Promise<void>;
+    onImportVault: () => Promise<void>;
+    importQueueCount: number;
+    onOpenImportQueue: () => void;
 }
 
 export function Dashboard({
@@ -39,6 +44,11 @@ export function Dashboard({
     onGitLog,
     onDeleteAllCards,
     onDeleteRepo,
+    onOpenDataFolder,
+    onForceRegenerate,
+    onImportVault,
+    importQueueCount,
+    onOpenImportQueue,
 }: DashboardProps) {
     const [generating, setGenerating] = useState(false);
     const [checking, setChecking] = useState(false);
@@ -158,6 +168,37 @@ export function Dashboard({
                     </div>
                 )}
 
+                {backendOnline && (
+                    <button
+                        className="echovault-btn echovault-btn-show"
+                        onClick={onForceRegenerate}
+                        disabled={generating}
+                        title="Generate cards from the note currently open in the editor"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+                        Regenerate from Active Note
+                    </button>
+                )}
+
+                <span
+                    className="echovault-btn-tooltip-wrap"
+                    title={importQueueCount === 0
+                        ? "Import queue is empty — open a vault with existing notes to populate it"
+                        : `${importQueueCount} notes waiting to be imported`}
+                >
+                    <button
+                        className="echovault-btn echovault-btn-show"
+                        onClick={onOpenImportQueue}
+                        disabled={importQueueCount === 0}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                        Import Existing Notes
+                        {importQueueCount > 0 && (
+                            <span className="echovault-queue-badge">{importQueueCount}</span>
+                        )}
+                    </button>
+                </span>
+
                 <button
                     className="echovault-btn echovault-btn-show"
                     onClick={onStartReview}
@@ -197,6 +238,12 @@ export function Dashboard({
                 <div className="echovault-dev-divider">
                     <span>Dev Tools</span>
                 </div>
+                <button
+                    className="echovault-btn echovault-btn-test"
+                    onClick={onOpenDataFolder}
+                >
+                    Open Data Folder
+                </button>
                 <button
                     className="echovault-btn echovault-btn-test"
                     onClick={onAddTestCard}

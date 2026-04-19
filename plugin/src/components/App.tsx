@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
 import { Flashcard, CardType, GenerationResult, CardFeedbackEntry } from "../types";
-import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, StatusEntry } from "../core/git";
+import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, gitHasEchoVaultCommits, StatusEntry } from "../core/git";
 import { checkBackendHealth, sendFeedback } from "../core/api-client";
-import { GenerateStage } from "../core/generate";
-import { generateId, getTodayDateString, nowISO } from "../utils";
+import { GenerateStage, importSelected } from "../core/generate";
+import { generateId, getTodayDateString, nowISO, questionSimilarity } from "../utils";
 import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";
 import { ReviewSession } from "./ReviewSession";
@@ -15,8 +15,9 @@ import { GitLog } from "./GitLog";
 import { Tutorial } from "./Tutorial";
 import { EmptyState } from "./EmptyState";
 import { StagingPanel } from "./StagingPanel";
+import { ImportQueue } from "./ImportQueue";
 
-type Panel = "init" | "tutorial" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log" | "staging";
+type Panel = "init" | "tutorial" | "dashboard" | "review" | "review-all" | "browse" | "create" | "git-log" | "staging" | "import-queue";
 
 const PANEL_LABELS: Record<Panel, string> = {
     init: "Setup",
@@ -28,6 +29,7 @@ const PANEL_LABELS: Record<Panel, string> = {
     create: "Create",
     "git-log": "History",
     staging: "Review Cards",
+    "import-queue": "Import Existing Notes",
 };
 
 export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
@@ -42,6 +44,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [changedFiles, setChangedFiles] = useState<StatusEntry[]>([]);
     const [generateStage, setGenerateStage] = useState<GenerateStage | null>(null);
     const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
+    const [importQueueCount, setImportQueueCount] = useState(0);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {
@@ -86,6 +89,17 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     setPanel("dashboard");
                 }
                 refreshChangedFiles();
+
+                // On first EchoVault use, populate the import queue with all vault notes
+                const hasHistory = await gitHasEchoVaultCommits(vaultPath);
+                if (!hasHistory && plugin.store.getImportQueue().length === 0) {
+                    const EXCLUDED = [plugin.settings.flashcardFolderPath + "/", ".obsidian/"];
+                    const allPaths = plugin.app.vault.getMarkdownFiles()
+                        .filter((f) => !EXCLUDED.some((p) => f.path.startsWith(p)))
+                        .map((f) => f.path);
+                    await plugin.store.initImportQueue(allPaths);
+                }
+                setImportQueueCount(plugin.store.getImportQueue().length);
             } else {
                 setPanel("init");
             }
@@ -110,6 +124,17 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             const vaultPath = plugin.getVaultPath();
             await gitInit(vaultPath);
             setGitInitialized(true);
+
+            // Populate import queue — no EchoVault history exists yet after a fresh git init
+            if (plugin.store.getImportQueue().length === 0) {
+                const EXCLUDED = [plugin.settings.flashcardFolderPath + "/", ".obsidian/"];
+                const allPaths = plugin.app.vault.getMarkdownFiles()
+                    .filter((f) => !EXCLUDED.some((p) => f.path.startsWith(p)))
+                    .map((f) => f.path);
+                await plugin.store.initImportQueue(allPaths);
+                setImportQueueCount(allPaths.length);
+            }
+
             new Notice("Git repository initialized — you're all set!");
             if (!plugin.settings.hasSeenTutorial) {
                 navigateTo("tutorial");
@@ -133,7 +158,20 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             const result = await plugin.commitAndGenerate((stage) => setGenerateStage(stage));
             setGenerateStage(null);
             if (result) {
-                setGenerationResult(result);
+                // Annotate staged cards with duplicate warnings
+                const existingCards = plugin.store.getAllCards();
+                const SIMILARITY_THRESHOLD = 0.6;
+                const annotated = result.fileGroups.map((fg) => ({
+                    ...fg,
+                    cards: fg.cards.map((card) => {
+                        const similar = existingCards.find(
+                            (ec) => ec.sourceNotePath === card.sourceNotePath &&
+                                questionSimilarity(card.question, ec.question) >= SIMILARITY_THRESHOLD
+                        );
+                        return similar ? { ...card, duplicateOf: similar.question } : card;
+                    }),
+                }));
+                setGenerationResult({ ...result, fileGroups: annotated });
                 navigateTo("staging");
                 return;
             }
@@ -150,12 +188,16 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         if (acceptedCards.length > 0) {
             await plugin.store.addCards(acceptedCards);
         }
+        if (generationResult?.processedFiles) {
+            await plugin.store.recordProcessedFiles(generationResult.processedFiles);
+        }
         try {
             await sendFeedback(feedback, plugin.settings);
         } catch {
             // Feedback is best-effort
         }
         setGenerationResult(null);
+        setImportQueueCount(plugin.store.getImportQueue().length);
         plugin.updateStatusBar();
         refreshStats();
         refreshChangedFiles();
@@ -197,6 +239,93 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`Failed to remove git repo: ${msg}`);
         }
+    };
+
+    const handleImportSelected = async (selectedPaths: string[], onProgress?: (completed: number, total: number) => void) => {
+        try {
+            const vaultPath = plugin.getVaultPath();
+            const result = await importSelected(selectedPaths, vaultPath, plugin.app.vault, plugin.store, plugin.settings, plugin.logger, onProgress);
+            if (result) {
+                const existingCards = plugin.store.getAllCards();
+                const SIMILARITY_THRESHOLD = 0.6;
+                const annotated = result.fileGroups.map((fg) => ({
+                    ...fg,
+                    cards: fg.cards.map((card) => {
+                        const similar = existingCards.find(
+                            (ec) => ec.sourceNotePath === card.sourceNotePath &&
+                                questionSimilarity(card.question, ec.question) >= SIMILARITY_THRESHOLD
+                        );
+                        return similar ? { ...card, duplicateOf: similar.question } : card;
+                    }),
+                }));
+                setGenerationResult({ ...result, fileGroups: annotated });
+                navigateTo("staging");
+            }
+        } catch {
+            const healthy = await checkBackendHealth(plugin.settings);
+            setBackendOnline(healthy);
+        }
+    };
+
+    const handleImportVault = async () => {
+        try {
+            const result = await plugin.importVault();
+            if (result) {
+                const existingCards = plugin.store.getAllCards();
+                const SIMILARITY_THRESHOLD = 0.6;
+                const annotated = result.fileGroups.map((fg) => ({
+                    ...fg,
+                    cards: fg.cards.map((card) => {
+                        const similar = existingCards.find(
+                            (ec) => ec.sourceNotePath === card.sourceNotePath &&
+                                questionSimilarity(card.question, ec.question) >= SIMILARITY_THRESHOLD
+                        );
+                        return similar ? { ...card, duplicateOf: similar.question } : card;
+                    }),
+                }));
+                setGenerationResult({ ...result, fileGroups: annotated });
+                navigateTo("staging");
+            }
+        } catch {
+            const healthy = await checkBackendHealth(plugin.settings);
+            setBackendOnline(healthy);
+        }
+    };
+
+    const handleForceRegenerateActiveFile = async () => {
+        const activeFile = plugin.app.workspace.getActiveFile();
+        if (!activeFile || activeFile.extension !== "md") {
+            new Notice("Open a markdown note first, then click Regenerate.");
+            return;
+        }
+        try {
+            const result = await plugin.forceRegenerateFromFile(activeFile.path);
+            if (result) {
+                const existingCards = plugin.store.getAllCards();
+                const SIMILARITY_THRESHOLD = 0.6;
+                const annotated = result.fileGroups.map((fg) => ({
+                    ...fg,
+                    cards: fg.cards.map((card) => {
+                        const similar = existingCards.find(
+                            (ec) => ec.sourceNotePath === card.sourceNotePath &&
+                                questionSimilarity(card.question, ec.question) >= SIMILARITY_THRESHOLD
+                        );
+                        return similar ? { ...card, duplicateOf: similar.question } : card;
+                    }),
+                }));
+                setGenerationResult({ ...result, fileGroups: annotated });
+                navigateTo("staging");
+            }
+        } catch {
+            const healthy = await checkBackendHealth(plugin.settings);
+            setBackendOnline(healthy);
+        }
+    };
+
+    const handleOpenDataFolder = () => {
+        const { shell } = require("electron") as typeof import("electron");
+        const folderPath = `${plugin.getVaultPath()}/${plugin.settings.flashcardFolderPath}`;
+        shell.openPath(folderPath);
     };
 
     const handleDeleteAllCards = async () => {
@@ -328,6 +457,11 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                         onGitLog={() => navigateTo("git-log")}
                         onDeleteAllCards={handleDeleteAllCards}
                         onDeleteRepo={handleDeleteRepo}
+                        onOpenDataFolder={handleOpenDataFolder}
+                        onForceRegenerate={handleForceRegenerateActiveFile}
+                        onImportVault={handleImportVault}
+                        importQueueCount={importQueueCount}
+                        onOpenImportQueue={() => navigateTo("import-queue")}
                     />
                 )}
 
@@ -389,9 +523,18 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
 
                 {panel === "staging" && generationResult && (
                     <StagingPanel
+                        app={plugin.app}
                         generationResult={generationResult}
                         onConfirm={handleStagingConfirm}
                         onCancel={handleStagingCancel}
+                    />
+                )}
+
+                {panel === "import-queue" && (
+                    <ImportQueue
+                        queue={plugin.store.getImportQueue()}
+                        onImport={handleImportSelected}
+                        onBack={() => navigateTo("dashboard")}
                     />
                 )}
             </div>
