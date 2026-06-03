@@ -39,6 +39,7 @@ class FileDiffEntry(BaseModel):
     path: str
     diff_content: str
     images: list[ImageData] = []
+    max_cards: int | None = None
 
 
 class BatchGenerateRequest(BaseModel):

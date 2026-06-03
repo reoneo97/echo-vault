@@ -71,6 +71,7 @@ export interface FileDiffPayload {
     path: string;
     diff_content: string;
     images?: ImageAttachment[];
+    max_cards?: number;
 }
 
 export interface FileResult {
@@ -101,6 +102,9 @@ export interface StagedCard {
     decision: StagingDecision | null;
     editedQuestion?: string;
     editedAnswer?: string;
+    editedChoices?: string[];
+    editedCorrectIndex?: number;
+    editedCorrectValue?: boolean;
     /** Set if this card's question is similar to an existing card. */
     duplicateOf?: string;
     // Card type fields carried from backend response

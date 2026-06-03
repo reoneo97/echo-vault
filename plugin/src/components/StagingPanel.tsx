@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { App } from "obsidian";
 import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry } from "../types";
 import { generateId, nowISO, getTodayDateString } from "../utils";
@@ -23,6 +23,7 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
         () => new Set(generationResult.fileGroups.map((fg) => fg.sourceNote))
     );
     const [editingCard, setEditingCard] = useState<string | null>(null);
+    const footerRef = useRef<HTMLDivElement>(null);
 
     const allCards = groups.flatMap((g) => g.cards);
     const accepted = allCards.filter((c) => c.decision === "accepted" || c.decision === "edited");
@@ -40,14 +41,15 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
         );
     };
 
-    const setAllDecisions = (decision: "accepted" | "rejected") => {
+    const setAllDecisions = useCallback((decision: "accepted" | "rejected") => {
         setGroups((prev) =>
             prev.map((g) => ({
                 ...g,
                 cards: g.cards.map((c) => ({ ...c, decision })),
             }))
         );
-    };
+        setTimeout(() => footerRef.current?.scrollIntoView({ behavior: "smooth", block: "end" }), 50);
+    }, []);
 
     const setGroupDecision = (sourceNote: string, decision: "accepted" | "rejected") => {
         setGroups((prev) =>
@@ -87,11 +89,11 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
                 interval: 0,
                 nextReviewDate: today,
             };
-            if (c.cardType === "mcq" && c.choices && c.correctIndex !== undefined) {
-                return { ...base, type: "mcq" as const, choices: c.choices, correctIndex: c.correctIndex };
+            if (c.cardType === "mcq" && (c.editedChoices ?? c.choices)) {
+                return { ...base, type: "mcq" as const, choices: c.editedChoices ?? c.choices!, correctIndex: c.editedCorrectIndex ?? c.correctIndex ?? 0 };
             }
-            if (c.cardType === "tf" && c.correctValue !== undefined) {
-                return { ...base, type: "tf" as const, correctValue: c.correctValue };
+            if (c.cardType === "tf") {
+                return { ...base, type: "tf" as const, correctValue: c.editedCorrectValue ?? c.correctValue ?? true };
             }
             return { ...base, type: "qa" as const };
         });
@@ -160,11 +162,14 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
                         onEditToggle={(tempId) => setEditingCard(editingCard === tempId ? null : tempId)}
                         onUpdateQuestion={(tempId, q) => updateCard(tempId, { editedQuestion: q })}
                         onUpdateAnswer={(tempId, a) => updateCard(tempId, { editedAnswer: a })}
+                        onUpdateChoices={(tempId, choices) => updateCard(tempId, { editedChoices: choices })}
+                        onUpdateCorrectIndex={(tempId, index) => updateCard(tempId, { editedCorrectIndex: index })}
+                        onUpdateCorrectValue={(tempId, value) => updateCard(tempId, { editedCorrectValue: value })}
                     />
                 ))}
             </div>
 
-            <div className="echovault-staging-footer">
+            <div className="echovault-staging-footer" ref={footerRef}>
                 <button
                     className="echovault-btn echovault-btn-primary"
                     onClick={handleConfirm}
@@ -198,6 +203,9 @@ function StagingFileCard({
     onEditToggle,
     onUpdateQuestion,
     onUpdateAnswer,
+    onUpdateChoices,
+    onUpdateCorrectIndex,
+    onUpdateCorrectValue,
 }: {
     app: App;
     sourceNote: string;
@@ -212,6 +220,9 @@ function StagingFileCard({
     onEditToggle: (tempId: string) => void;
     onUpdateQuestion: (tempId: string, q: string) => void;
     onUpdateAnswer: (tempId: string, a: string) => void;
+    onUpdateChoices: (tempId: string, choices: string[]) => void;
+    onUpdateCorrectIndex: (tempId: string, index: number) => void;
+    onUpdateCorrectValue: (tempId: string, value: boolean) => void;
 }) {
     const accepted = cards.filter((c) => c.decision === "accepted" || c.decision === "edited").length;
     const rejected = cards.filter((c) => c.decision === "rejected").length;
@@ -260,6 +271,9 @@ function StagingFileCard({
                                 onReject={() => onRejectCard(card.tempId)}
                                 onUpdateQuestion={(q) => onUpdateQuestion(card.tempId, q)}
                                 onUpdateAnswer={(a) => onUpdateAnswer(card.tempId, a)}
+                                onUpdateChoices={(choices) => onUpdateChoices(card.tempId, choices)}
+                                onUpdateCorrectIndex={(i) => onUpdateCorrectIndex(card.tempId, i)}
+                                onUpdateCorrectValue={(v) => onUpdateCorrectValue(card.tempId, v)}
                             />
                         ))}
                     </div>
@@ -278,6 +292,9 @@ function StagingCard({
     onReject,
     onUpdateQuestion,
     onUpdateAnswer,
+    onUpdateChoices,
+    onUpdateCorrectIndex,
+    onUpdateCorrectValue,
 }: {
     app: App;
     card: StagedCard;
@@ -287,6 +304,9 @@ function StagingCard({
     onReject: () => void;
     onUpdateQuestion: (q: string) => void;
     onUpdateAnswer: (a: string) => void;
+    onUpdateChoices: (choices: string[]) => void;
+    onUpdateCorrectIndex: (index: number) => void;
+    onUpdateCorrectValue: (value: boolean) => void;
 }) {
     const [collapsed, setCollapsed] = useState(false);
 
@@ -337,7 +357,54 @@ function StagingCard({
                         onChange={(e) => onUpdateQuestion(e.target.value)}
                         rows={2}
                     />
-                    <label className="echovault-staging-label">Answer</label>
+                    {card.cardType === "mcq" && (
+                        <>
+                            <label className="echovault-staging-label">Options (select correct)</label>
+                            {(card.editedChoices ?? card.choices ?? []).map((choice, i) => {
+                                const currentCorrect = card.editedCorrectIndex ?? card.correctIndex ?? 0;
+                                return (
+                                    <div key={i} className="echovault-staging-mcq-row">
+                                        <input
+                                            type="radio"
+                                            name={`correct-${card.tempId}`}
+                                            checked={currentCorrect === i}
+                                            onChange={() => onUpdateCorrectIndex(i)}
+                                        />
+                                        <input
+                                            type="text"
+                                            className="echovault-staging-option-input"
+                                            value={choice}
+                                            onChange={(e) => {
+                                                const updated = [...(card.editedChoices ?? card.choices ?? [])];
+                                                updated[i] = e.target.value;
+                                                onUpdateChoices(updated);
+                                            }}
+                                        />
+                                    </div>
+                                );
+                            })}
+                        </>
+                    )}
+                    {card.cardType === "tf" && (
+                        <>
+                            <label className="echovault-staging-label">Correct Answer</label>
+                            <div className="echovault-staging-tf-toggle">
+                                <button
+                                    className={`echovault-staging-tf-btn ${(card.editedCorrectValue ?? card.correctValue) === true ? "echovault-staging-tf-btn-active" : ""}`}
+                                    onClick={() => onUpdateCorrectValue(true)}
+                                >
+                                    True
+                                </button>
+                                <button
+                                    className={`echovault-staging-tf-btn ${(card.editedCorrectValue ?? card.correctValue) === false ? "echovault-staging-tf-btn-active" : ""}`}
+                                    onClick={() => onUpdateCorrectValue(false)}
+                                >
+                                    False
+                                </button>
+                            </div>
+                        </>
+                    )}
+                    <label className="echovault-staging-label">Answer / Explanation</label>
                     <textarea
                         className="echovault-staging-textarea"
                         value={card.editedAnswer ?? card.answer}
@@ -347,6 +414,9 @@ function StagingCard({
                 </>
             ) : (
                 <>
+                    <div className={`echovault-staging-type-badge echovault-staging-type-${card.cardType}`}>
+                        {card.cardType === "mcq" ? "Multiple Choice" : card.cardType === "tf" ? "True / False" : "Q & A"}
+                    </div>
                     {card.duplicateOf && (
                         <div className="echovault-staging-duplicate-warning">
                             Possible duplicate of: <em>{card.duplicateOf}</em>

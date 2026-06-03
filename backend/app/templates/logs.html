@@ -22,9 +22,17 @@
     .section h3 { color: #a8a8d8; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
     pre.diff { background: #0a0a1a; border: 1px solid #0f3460; border-radius: 6px; padding: 12px; font-size: 0.8em; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #b0b0d0; }
     .card { background: #0f3460; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
-    .card-num { font-size: 0.7em; color: #e94560; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .card-num { font-size: 0.7em; color: #e94560; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-type { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 3px; }
+    .card-type-standard { background: #2a2a4a; color: #a8a8d8; }
+    .card-type-multiple_choice { background: #1a3a5c; color: #53b8f8; }
+    .card-type-true_false { background: #2a1a4a; color: #c8a8f8; }
     .card-q { margin-bottom: 6px; line-height: 1.5; }
-    .card-a { color: #53d8a8; line-height: 1.5; }
+    .card-a { color: #53d8a8; line-height: 1.5; margin-bottom: 4px; }
+    .card-options { margin-top: 6px; }
+    .card-option { font-size: 0.85em; padding: 2px 0; color: #b0b0d0; }
+    .card-option.correct { color: #53d8a8; font-weight: 600; }
     .empty { color: #666; font-style: italic; }
     .file-block { border: 1px solid #0f3460; border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
     .file-header { background: #0f3460; padding: 8px 14px; font-size: 0.85em; font-weight: 600; color: #fff; display: flex; justify-content: space-between; }
@@ -68,9 +76,21 @@
                                 {% if file.cards %}
                                     {% for card in file.cards %}
                                     <div class="card">
-                                        <div class="card-num">Card {{ loop.index }}</div>
+                                        <div class="card-header">
+                                            <span class="card-num">Card {{ loop.index }}</span>
+                                            <span class="card-type card-type-{{ card.type | default('standard') }}">{{ card.type | default('standard') | replace('_', ' ') }}</span>
+                                        </div>
                                         <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
                                         <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                                        {% if card.options %}
+                                        <div class="card-options">
+                                            {% for opt in card.options %}
+                                            <div class="card-option {% if opt == card.correct_answer %}correct{% endif %}">
+                                                {{ loop.index }}. {{ opt | e }} {% if opt == card.correct_answer %}✓{% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
                                     </div>
                                     {% endfor %}
                                 {% else %}

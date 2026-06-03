@@ -5,11 +5,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import logfire
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
+from .observability import batch_files, cards_generated, llm_errors, cards_accepted, cards_rejected, cards_edited
 from .openrouter import generate_cards_from_diff, agent_health_stream
 from .schemas import (
     GenerateRequest, GenerateResponse,
@@ -104,18 +107,14 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     valid_files = [f for f in req.files if f.diff_content.strip()]
     if not valid_files:
         raise HTTPException(status_code=400, detail="all diffs are empty")
+    logfire.info("batch generate started", file_count=len(valid_files))
 
-    # Distribute max_cards budget proportionally to diff size
-    total_len = sum(len(f.diff_content) for f in valid_files)
-    budgets = [max(1, round(req.max_cards * len(f.diff_content) / total_len)) for f in valid_files]
-    # Cap total to not exceed max_cards
-    while sum(budgets) > req.max_cards and len(budgets) > 1:
-        max_idx = budgets.index(max(budgets))
-        budgets[max_idx] -= 1
+    # Per-file budgets set by plugin based on word count heuristic; default 5 if missing
+    budgets = [f.max_cards if f.max_cards is not None else 5 for f in valid_files]
 
     logger.info(
-        "Batch request: %d files, max_cards=%d, budgets=%s",
-        len(valid_files), req.max_cards, budgets,
+        "Batch request: %d files, budgets=%s",
+        len(valid_files), budgets,
     )
 
     start = time.time()
@@ -143,7 +142,23 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
             file_results.append(FileResultEntry(source_note=f.path, cards=result))
 
     total_cards = sum(len(fr.cards) for fr in file_results)
+    failures = sum(1 for fr in file_results if fr.error)
+
+    # Record custom Prometheus metrics
+    batch_files.observe(len(valid_files))
+    llm_errors.inc(failures)
+    for fr in file_results:
+        for card in fr.cards:
+            cards_generated.labels(card_type=card.type.value).inc()
+
     logger.info("Batch done: %d cards in %.1fs across %d files", total_cards, elapsed, len(valid_files))
+    logfire.info(
+        "batch generate complete",
+        total_cards=total_cards,
+        elapsed_seconds=round(elapsed, 2),
+        files=len(valid_files),
+        failures=failures,
+    )
 
     # Log batch request
     log_entry = {
@@ -184,6 +199,10 @@ async def submit_feedback(req: FeedbackRequest):
     log_file = LOGS_DIR / "feedback.jsonl"
     with open(log_file, "a") as f:
         f.write(json.dumps(log_entry) + "\n")
+
+    cards_accepted.inc(log_entry["accepted"])
+    cards_rejected.inc(log_entry["rejected"])
+    cards_edited.inc(log_entry["edited"])
 
     logger.info(
         "Feedback received: %d entries (%d accepted, %d rejected, %d edited)",

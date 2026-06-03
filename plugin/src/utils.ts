@@ -1,3 +1,9 @@
+/** Returns how many flashcards to generate for a piece of text: 1 per 120 words, capped 1–15. */
+export function cardBudget(text: string): number {
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    return Math.max(1, Math.min(15, Math.floor(words / 120)));
+}
+
 /** djb2 hash — fast, non-cryptographic, good enough for content deduplication. */
 export function hashContent(content: string): string {
     let hash = 5381;

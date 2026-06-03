@@ -31,73 +31,116 @@
 ## Architecture
 
 ```
-Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI)
-┌──────────────────────────────┐         ┌─────────────────────┐
-│  Git ops (commit, diff)      │         │                     │
-│  Flashcard storage           │── diff ─▶  OpenRouter LLM API │
-│  SM-2 scheduling             │◀─ cards ─│                     │
-│  React sidebar UI            │         └─────────────────────┘
-└──────────────────────────────┘
+Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI + Docker)
+┌──────────────────────────────┐         ┌──────────────────────────────┐
+│  Git ops (commit, diff)      │         │  OpenRouter LLM API          │
+│  Flashcard storage           │── diff ─▶  Prometheus metrics          │
+│  SM-2 scheduling             │◀─ cards ─│  Logfire tracing             │
+│  React sidebar UI            │         └──────────────────────────────┘
+└──────────────────────────────┘                    │
+                                         ┌──────────▼───────────┐
+                                         │  Grafana dashboard   │
+                                         │  :3000               │
+                                         └──────────────────────┘
 ```
 
 - **Plugin** handles everything local: UI, git, storage, review scheduling
-- **Backend** handles LLM calls only: receives per-file diffs, runs parallel LLM calls, returns cards grouped by source file
+- **Backend** handles LLM calls, metrics, and tracing — runs in Docker
 - Reviews work fully offline — the backend is only needed for generating new cards
 
-## Setup
+---
 
-### Backend
+## Quick Start
+
+### 1. Configure the backend
 
 ```bash
-cd backend
-cp .env.example .env
-# Add your OpenRouter API key to .env
-
-uv venv && source .venv/bin/activate
-uv pip install -e .
-uvicorn app.main:app --reload
+cp backend/.env.example backend/.env
 ```
 
-The backend runs at `http://localhost:8000`. Verify with:
+Edit `backend/.env` and add your keys:
 
+```
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=qwen/qwen3.5-9b
+LOGFIRE_TOKEN=pylf_...        # optional — omit to disable tracing
+```
+
+### 2. Start everything
+
+```bash
+make up
+```
+
+This builds and starts the backend, Prometheus, and Grafana in Docker:
+
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:8000 |
+| Grafana dashboard | http://localhost:3000 (admin / admin) |
+| Prometheus | http://localhost:9090 |
+
+Verify the backend is healthy:
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-### Plugin
+### 3. Install the plugin
+
+Build and copy to your vault:
 
 ```bash
-cd plugin
-npm install
-npm run build
+make install PLUGIN_DEST="/path/to/your/vault/.obsidian/plugins/echo-vault"
 ```
 
-Then copy these files into your vault at `.obsidian/plugins/echo-vault/`:
+Enable the plugin in Obsidian → Settings → Community Plugins.
 
-- `main.js`
-- `manifest.json`
-- `styles.css`
+---
 
-Or use `make install` to build and copy to the test vault automatically.
+## Daily Workflow
 
-Enable the plugin in Obsidian settings.
+```bash
+make up        # start backend + monitoring (run once; restarts automatically on reboot isn't automatic — re-run after restart)
+make down      # stop everything
+make logs      # tail backend logs
+make restart   # rebuild + restart backend after code changes
+```
+
+---
+
+## Development
+
+```bash
+# Plugin — watch mode with auto-install to test vault
+make start
+
+# Tests
+make test          # plugin + backend
+make test-plugin   # vitest
+make test-backend  # pytest
+```
+
+For backend changes, rebuild and restart the container:
+```bash
+make restart
+```
+
+---
 
 ## Usage
 
 | Command | What it does |
 |---|---|
 | **Commit & Generate Flashcards** | Commits vault changes, extracts the diff, generates flashcards via LLM |
+| **Regenerate from Active Note** | Force-generates cards from the currently open note |
+| **Import Existing Notes** | Gradually import notes from an existing vault (10 at a time) |
 | **Review Flashcards** | Opens the sidebar with due cards — answer then rate (Again / Hard / Good / Easy) |
-| **Browse All Cards** | Search, filter, and manage all flashcards with the card browser |
+| **Browse All Cards** | Search, filter, and manage all flashcards |
 
-A ribbon icon (brain) and status bar item showing due card count are also available.
+Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Again / Hard / Good / Easy).
 
-### Settings
-
-- **Backend URL** — where the Python backend is running (default: `http://localhost:8000`)
-- **Flashcard folder** — vault folder for storing flashcard data (default: `EchoVault`)
-- **Max cards per generation** — limit on flashcards created per commit (default: 10)
+---
 
 ## Configuration
 
@@ -105,16 +148,31 @@ A ribbon icon (brain) and status bar item showing due card count are also availa
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | — | Your OpenRouter API key (required) |
-| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4` | LLM model to use for generation |
+| `OPENROUTER_API_KEY` | — | Required. Get one at openrouter.ai |
+| `OPENROUTER_MODEL` | `qwen/qwen3.5-9b` | LLM model for card generation |
+| `LOGFIRE_TOKEN` | — | Optional. Enables distributed tracing via Logfire |
+| `ENVIRONMENT` | `development` | Passed to Logfire as the service environment |
+
+### Plugin settings
+
+| Setting | Default | Description |
+|---|---|---|
+| Backend URL | `http://localhost:8000` | Where the backend is running |
+| Flashcard folder | `EchoVault` | Vault folder for storing card data |
+| Max cards per generation | `10` | Global cap on cards per commit |
+
+---
 
 ## Project Structure
 
 ```
 echo-vault/
-├── plugin/        # Obsidian plugin (TypeScript + React)
-├── backend/       # FastAPI server (Python)
-└── vault/         # Test vault for development
+├── docker-compose.yml     # starts backend + Prometheus + Grafana
+├── Makefile               # make up / down / logs / install / test
+├── plugin/                # Obsidian plugin (TypeScript + React)
+├── backend/
+│   ├── Dockerfile
+│   ├── app/               # FastAPI application
+│   └── monitoring/        # Prometheus + Grafana config
+└── vault/                 # Test vault for development
 ```
-
-See [plugin/README.md](plugin/README.md) and [backend/README.md](backend/README.md) for detailed documentation.

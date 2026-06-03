@@ -1,12 +1,24 @@
 import base64
+import re
+import time
 
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-import asyncio 
+import asyncio
+
+
+def normalize_image_refs(text: str) -> str:
+    """Convert any LLM-invented image reference formats to Obsidian ![[filename]] syntax."""
+    # @{{filename}} → ![[filename]]
+    text = re.sub(r'@\{\{([^}]+)\}\}', r'![[\1]]', text)
+    # {{filename}} → ![[filename]]
+    text = re.sub(r'\{\{([^}]+\.(?:png|jpg|jpeg|gif|webp|bmp))\}\}', r'![[\1]]', text, flags=re.IGNORECASE)
+    return text
 
 from .config import settings
 from .schemas import FlashcardPair, GenerateResponse, ImageData
+from .observability import llm_duration
 
 provider = OpenAIProvider(
     base_url="https://openrouter.ai/api/v1",
@@ -21,24 +33,37 @@ model = OpenAIModel(
 FLASHCARD_PROMPT = """You are a flashcard generator. Given new content from a user's notes, \
 create flashcards that test understanding of the key concepts.
 
-Generate a mix of card types based on what suits the content best:
+Prefer multiple_choice and true_false cards wherever possible — only use standard when the \
+concept genuinely requires a free-form written response (e.g. open-ended explanations, \
+multi-step derivations, or subjective analysis).
 
-- "standard": A question with a written answer. Use for concepts, definitions, explanations, \
-and anything that requires a full-sentence response.
+Card types:
 
-- "multiple_choice": A question with 4 answer options and one correct answer. Use for facts, \
-classifications, or comparisons where plausible distractors can be written. \
-Set "options" to a list of 4 strings and "correct_answer" to the exact text of the correct option.
+- "multiple_choice": A question with exactly 4 answer options and one correct answer. \
+ALWAYS use this for facts, definitions, classifications, comparisons, numerical values, \
+or any question with a single objectively correct answer. \
+Generate distractors that are clearly and unambiguously wrong for this specific question — \
+they should be plausible enough to require thought, but must not be partially correct, \
+a superset, or a generalisation of the correct answer. \
+Prefer distractors drawn from specific peer-level concepts in the notes (e.g. other \
+algorithms, other values, other named techniques at the same level of abstraction). \
+Set "options" to a list of exactly 4 strings and "correct_answer" to the exact text of \
+the correct option.
 
-- "true_false": A statement that is either true or false. Use for common misconceptions or \
-clear factual claims. Set "answer" to "True" or "False" with a brief explanation, \
-and "correct_answer" to "True" or "False".
+- "true_false": A statement that is clearly true or false based on the notes. \
+Use for common misconceptions, negations of facts, or boundary conditions. \
+Set "answer" to "True" or "False" followed by a one-sentence explanation, \
+and "correct_answer" to exactly "True" or "False".
+
+- "standard": A question requiring a written answer. Reserve for explanations, \
+mechanisms, trade-offs, or multi-part reasoning that cannot be reduced to a single choice.
 
 Rules:
+- Aim for at least 60% multiple_choice and 20% true_false across the cards you generate.
 - Focus on the most important concepts only.
 - Make questions specific and unambiguous.
-- Keep answers concise.
-- For multiple_choice, ensure distractors are plausible but clearly wrong.
+- For multiple_choice, distractors must be plausible — drawn from real terms in the notes, \
+not obviously wrong.
 - Do not generate cards for trivial or obvious facts."""
 
 HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
@@ -87,11 +112,14 @@ async def generate_cards_from_diff(
     if max_cards:
         user_message += f"\n\nGenerate at most {max_cards} flashcards."
 
+    t0 = time.perf_counter()
+
     if images:
         user_message += (
             f"\n\nThe content references {len(images)} image(s). "
             "Examine the images and generate flashcards about their visual content as well. "
-            "Include the original image reference in the question field so the image displays during review."
+            "When referencing an image in a question, use exactly this Obsidian syntax: ![[filename]] "
+            "(e.g. ![[Pasted image 20230912.png]]). Do not use any other format."
         )
         # Build multimodal message: text + image content blocks
         message_parts: list = [user_message]
@@ -104,4 +132,10 @@ async def generate_cards_from_diff(
     else:
         result = await flashcard_agent.run(user_message)
 
-    return result.output.cards[:max_cards]
+    llm_duration.observe(time.perf_counter() - t0)
+
+    cards = result.output.cards[:max_cards]
+    for card in cards:
+        card.question = normalize_image_refs(card.question)
+        card.answer = normalize_image_refs(card.answer)
+    return cards

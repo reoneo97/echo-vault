@@ -4,7 +4,7 @@ import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
 import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "../types";
-import { generateId, hashContent } from "../utils";
+import { generateId, hashContent, cardBudget } from "../utils";
 
 /** Maps a backend FileResult card to the type fields needed by StagedCard. */
 function mapCardTypeFields(c: FileResult["cards"][number]): Pick<StagedCard, "cardType" | "choices" | "correctIndex" | "correctValue"> {
@@ -116,6 +116,8 @@ async function resolveImages(
 
 export type GenerateStage = "committing" | "analyzing" | "generating";
 
+const MAX_FILES_PER_COMMIT_BATCH = 10;
+
 export async function commitAndGenerate(
     vaultPath: string,
     vault: Vault,
@@ -196,9 +198,19 @@ export async function commitAndGenerate(
         return null;
     }
 
+    // Cap files per staging session — overflow goes to import queue for gradual processing
+    let filesToProcess = unprocessedFiles;
+    if (unprocessedFiles.length > MAX_FILES_PER_COMMIT_BATCH) {
+        const overflow = unprocessedFiles.slice(MAX_FILES_PER_COMMIT_BATCH).map((f) => f.path);
+        await store.initImportQueue(overflow);
+        filesToProcess = unprocessedFiles.slice(0, MAX_FILES_PER_COMMIT_BATCH);
+        logger?.info("Capped commit batch, queued overflow", { processing: filesToProcess.length, queued: overflow.length });
+        new Notice(`Processing ${MAX_FILES_PER_COMMIT_BATCH} of ${unprocessedFiles.length} changed files. ${overflow.length} more queued — use "Import Existing Notes" to continue.`);
+    }
+
     // Resolve images per file
     const payloads: FileDiffPayload[] = [];
-    for (const file of unprocessedFiles) {
+    for (const file of filesToProcess) {
         const imageRefs = extractImageRefs(file.content);
         let images: ImageAttachment[] = [];
         if (imageRefs.length > 0) {
@@ -208,6 +220,7 @@ export async function commitAndGenerate(
         payloads.push({
             path: file.path,
             diff_content: file.content,
+            max_cards: cardBudget(file.content),
             ...(images.length > 0 ? { images } : {}),
         });
     }
@@ -220,7 +233,7 @@ export async function commitAndGenerate(
     }
 
     onProgress?.("generating");
-    const totalFiles = files.length;
+    const totalFiles = filesToProcess.length;
     const isLargeVault = chunks.length > 1;
 
     const fileGroups: StagedFileGroup[] = [];
@@ -280,7 +293,7 @@ export async function commitAndGenerate(
         return null;
     }
 
-    const processedFiles = unprocessedFiles.map((f) => ({ path: f.path, contentHash: hashContent(f.content) }));
+    const processedFiles = filesToProcess.map((f) => ({ path: f.path, contentHash: hashContent(f.content) }));
     logger?.info("Cards generated for staging", { count: totalCards });
     return { commitHash: commitResult.hash, fileGroups, totalCards, processedFiles };
 }
@@ -315,6 +328,7 @@ export async function importSelected(
             payloads.push({
                 path: filePath,
                 diff_content: content,
+                max_cards: cardBudget(content),
                 ...(images.length > 0 ? { images } : {}),
             });
         } catch {
@@ -586,6 +600,7 @@ export async function forceGenerateFromFile(
     const payload: FileDiffPayload = {
         path: filePath,
         diff_content: content,
+        max_cards: cardBudget(content),
         ...(images.length > 0 ? { images } : {}),
     };
 
