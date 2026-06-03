@@ -2,7 +2,7 @@ PLUGIN_SRC = ./plugin
 PLUGIN_DEST = ./vault/echo-vault/.obsidian/plugins/echo-vault
 BACKEND_SRC = ./backend
 
-.PHONY: build install dev start up down logs restart test test-plugin test-backend
+.PHONY: build install dev start up down logs restart eval test test-plugin test-backend
 
 build:
 	cd $(PLUGIN_SRC) && npm run build
@@ -33,6 +33,11 @@ logs:
 
 restart:
 	docker compose restart backend
+
+# ── Evals ─────────────────────────────────────────────────────────────────────
+
+eval:
+	cd $(BACKEND_SRC) && uv run python evals/run_eval.py $(ARGS)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
