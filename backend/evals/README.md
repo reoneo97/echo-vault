@@ -59,7 +59,7 @@ make up
 make eval
 
 # 3. View results
-open http://localhost:5000
+open http://localhost:5001
 ```
 
 To label a specific prompt version:

@@ -40,6 +40,7 @@ class FileDiffEntry(BaseModel):
     diff_content: str
     images: list[ImageData] = []
     max_cards: int | None = None
+    tags: list[str] = []
 
 
 class BatchGenerateRequest(BaseModel):
@@ -63,8 +64,10 @@ class CardFeedbackEntry(BaseModel):
     source_note: str
     commit_hash: str
     decision: str  # "accepted" | "rejected" | "edited"
+    original_type: str  # "qa" | "mcq" | "tf"
     edited_question: str | None = None
     edited_answer: str | None = None
+    edited_type: str | None = None  # set only when type was changed
 
 
 class FeedbackRequest(BaseModel):

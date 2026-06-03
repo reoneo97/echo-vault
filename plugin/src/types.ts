@@ -1,5 +1,10 @@
 export type CardType = "qa" | "mcq" | "tf";
 
+export interface ReviewHistoryEntry {
+    date: string;   // ISO timestamp
+    quality: number; // SM-2 quality 0-5
+}
+
 export interface BaseFlashcard {
     id: string;
     type: CardType;
@@ -13,6 +18,8 @@ export interface BaseFlashcard {
     easinessFactor: number;
     interval: number;
     nextReviewDate: string;
+    reviewHistory: ReviewHistoryEntry[];
+    tags: string[];
 }
 
 export interface QAFlashcard extends BaseFlashcard {
@@ -72,6 +79,7 @@ export interface FileDiffPayload {
     diff_content: string;
     images?: ImageAttachment[];
     max_cards?: number;
+    tags?: string[];
 }
 
 export interface FileResult {
@@ -102,11 +110,13 @@ export interface StagedCard {
     decision: StagingDecision | null;
     editedQuestion?: string;
     editedAnswer?: string;
+    editedCardType?: CardType;
     editedChoices?: string[];
     editedCorrectIndex?: number;
     editedCorrectValue?: boolean;
     /** Set if this card's question is similar to an existing card. */
     duplicateOf?: string;
+    tags: string[];
     // Card type fields carried from backend response
     cardType: CardType;
     choices?: string[];       // MCQ only
@@ -133,6 +143,8 @@ export interface CardFeedbackEntry {
     source_note: string;
     commit_hash: string;
     decision: StagingDecision;
+    original_type: CardType;
     edited_question?: string;
     edited_answer?: string;
+    edited_type?: CardType;
 }

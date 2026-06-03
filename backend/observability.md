@@ -154,6 +154,94 @@ monitoring/grafana/
 
 When Grafana starts, it reads these files and sets itself up automatically. This means the dashboard is version-controlled and reproducible — anyone who runs `docker compose up` gets the same setup.
 
+### Dashboard JSON structure
+
+Every panel in `monitoring/grafana/dashboards/echovault.json` follows the same skeleton:
+
+```json
+{
+  "id": 1,
+  "title": "Request Rate (req/s)",
+  "type": "timeseries",
+  "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+  "targets": [
+    {
+      "expr": "sum(rate(http_requests_total[1m])) by (handler)",
+      "legendFormat": "{{handler}}"
+    }
+  ],
+  "fieldConfig": {
+    "defaults": { "unit": "reqps" }
+  }
+}
+```
+
+The key fields:
+
+**`type`** — the visualisation. The two used here:
+- `"timeseries"` — line chart over time. Use for rates, latencies, anything that changes continuously.
+- `"stat"` — single big number. Use for totals and current values (e.g. total cards generated).
+
+**`gridPos`** — where the panel sits on the grid. Grafana uses a 24-column grid.
+- `x`, `y` — top-left corner (column, row)
+- `w`, `h` — width and height in grid units
+- Panels at the same `y` sit on the same row. Increment `y` by `h` to start a new row.
+
+**`targets`** — one or more PromQL queries. Each becomes a line on the chart.
+- `expr` — the PromQL query
+- `legendFormat` — label for the line. `{{handler}}` interpolates the `handler` label from Prometheus.
+
+**`fieldConfig.defaults.unit`** — how Grafana formats the numbers:
+- `"reqps"` → `0.05 req/s`
+- `"s"` → `2.3s`
+- `"percentunit"` → `85%` (input must be 0–1)
+- `"short"` → raw number with SI suffix (1k, 1M)
+
+---
+
+### Panel-by-panel breakdown
+
+**Row 1 — Traffic**
+
+| Panel | Type | Query | What to look for |
+|---|---|---|---|
+| Request Rate | timeseries | `rate(http_requests_total[1m])` by handler | Spikes = traffic bursts; zero = service down |
+| P95 Latency | timeseries | `histogram_quantile(0.95, ...)` | Should stay under 30s for LLM calls |
+
+**Row 2 — Errors & Volume**
+
+| Panel | Type | Query | What to look for |
+|---|---|---|---|
+| Error Rate | timeseries | `rate(http_requests_total{status_code=~"5.."}[1m])` | Any non-zero value needs attention |
+| Cards Generated | timeseries | `rate(echovault_cards_generated_total[5m])` by card_type | MCQ should dominate; high QA ratio = prompt drift |
+
+**Row 3 — LLM Performance**
+
+| Panel | Type | Query | What to look for |
+|---|---|---|---|
+| LLM Call Duration | timeseries | `histogram_quantile(0.95/0.50, echovault_llm_duration_seconds_bucket)` | P95 vs P50 gap reveals outlier calls |
+| Batch File Distribution | timeseries | `histogram_quantile(0.95, echovault_batch_files_bucket)` | Unusually large batches may indicate runaway generation |
+
+**Row 4 — User Feedback**
+
+| Panel | Type | Query | What to look for |
+|---|---|---|---|
+| Card Acceptance Rate | timeseries | `accepted / (accepted + rejected)` | Dropping rate = prompt quality regression |
+| Staging Decisions | timeseries | Rate of accepted/rejected/edited | High edit rate = cards are wrong but close |
+
+**Row 5 — Totals (stat panels)**
+
+Running counters since the container started: active requests, total cards generated, LLM error rate, total accepted/rejected/edited.
+
+---
+
+### Adding a new panel
+
+1. Open `echovault.json`
+2. Copy an existing panel object and change `id` (must be unique), `title`, `gridPos`, and `targets.expr`
+3. Save the file and run `docker compose restart grafana` — provisioned dashboards reload on restart
+4. Alternatively, build the panel interactively in Grafana UI → click the panel menu → **Inspect → Panel JSON** → copy the JSON back into `echovault.json`
+
 ### Reading the dashboard
 
 **Request Rate** — plots `rate(http_requests_total[1m])` grouped by handler. A spike here means traffic increased. A sudden drop to zero could mean the service is down.

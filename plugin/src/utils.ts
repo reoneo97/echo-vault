@@ -4,6 +4,37 @@ export function cardBudget(text: string): number {
     return Math.max(1, Math.min(15, Math.floor(words / 120)));
 }
 
+/**
+ * Extracts tags from YAML frontmatter. Handles three formats:
+ *   tags: [a, b, c]
+ *   tags:\n  - a\n  - b
+ *   tags: single
+ */
+export function extractFrontmatterTags(content: string): string[] {
+    const fmMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!fmMatch) return [];
+    const fm = fmMatch[1];
+
+    // Inline array: tags: [a, b, c]
+    const inline = fm.match(/^tags:\s*\[([^\]]*)\]/m);
+    if (inline) {
+        return inline[1].split(",").map((t) => t.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+    }
+
+    // Block list: tags:\n  - a\n  - b
+    const block = fm.match(/^tags:\s*\n((?:[ \t]+-[ \t]+.+\n?)+)/m);
+    if (block) {
+        return (block[1].match(/[ \t]+-[ \t]+(.+)/g) ?? [])
+            .map((t) => t.replace(/[ \t]+-[ \t]+/, "").trim());
+    }
+
+    // Single value: tags: value
+    const single = fm.match(/^tags:\s*(\S+)/m);
+    if (single && !single[1].startsWith("[")) return [single[1].trim()];
+
+    return [];
+}
+
 /** djb2 hash — fast, non-cryptographic, good enough for content deduplication. */
 export function hashContent(content: string): string {
     let hash = 5381;

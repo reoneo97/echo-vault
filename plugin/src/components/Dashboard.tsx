@@ -55,6 +55,7 @@ export function Dashboard({
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [confirmDeleteCards, setConfirmDeleteCards] = useState(false);
     const [filesExpanded, setFilesExpanded] = useState(false);
+    const [devToolsOpen, setDevToolsOpen] = useState(false);
 
     const todayStats = reviewLog.getTodayStats();
     const MAX_VISIBLE_FILES = 10;
@@ -77,6 +78,12 @@ export function Dashboard({
     const handleCommit = async () => {
         setGenerating(true);
         await onCommitAndGenerate();
+        setGenerating(false);
+    };
+
+    const handleForceRegenerate = async () => {
+        setGenerating(true);
+        await onForceRegenerate();
         setGenerating(false);
     };
 
@@ -171,7 +178,7 @@ export function Dashboard({
                 {backendOnline && (
                     <button
                         className="echovault-btn echovault-btn-show"
-                        onClick={onForceRegenerate}
+                        onClick={handleForceRegenerate}
                         disabled={generating}
                         title="Generate cards from the note currently open in the editor"
                     >
@@ -235,9 +242,14 @@ export function Dashboard({
             </div>
 
             <div className="echovault-dev-section">
-                <div className="echovault-dev-divider">
+                <button
+                    className="echovault-dev-toggle"
+                    onClick={() => setDevToolsOpen((v) => !v)}
+                >
                     <span>Dev Tools</span>
-                </div>
+                    <span className={`echovault-chevron ${devToolsOpen ? "echovault-chevron-open" : ""}`}>&#9656;</span>
+                </button>
+            {devToolsOpen && (<>
                 <button
                     className="echovault-btn echovault-btn-test"
                     onClick={onOpenDataFolder}
@@ -306,6 +318,7 @@ export function Dashboard({
                         </div>
                     </div>
                 )}
+            </>)}
             </div>
         </>
     );

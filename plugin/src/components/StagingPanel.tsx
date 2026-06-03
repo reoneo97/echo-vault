@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { App } from "obsidian";
-import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry } from "../types";
+import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry, CardType } from "../types";
 import { generateId, nowISO, getTodayDateString } from "../utils";
 import { MarkdownText } from "./MarkdownText";
 
@@ -76,6 +76,7 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
         const today = getTodayDateString();
 
         const acceptedCards: Flashcard[] = accepted.map((c) => {
+            const resolvedType = c.editedCardType ?? c.cardType;
             const base = {
                 id: generateId(),
                 question: c.editedQuestion ?? c.question,
@@ -88,11 +89,14 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
                 easinessFactor: 2.5,
                 interval: 0,
                 nextReviewDate: today,
+                reviewHistory: [],
+                tags: c.tags ?? [],
             };
-            if (c.cardType === "mcq" && (c.editedChoices ?? c.choices)) {
-                return { ...base, type: "mcq" as const, choices: c.editedChoices ?? c.choices!, correctIndex: c.editedCorrectIndex ?? c.correctIndex ?? 0 };
+            if (resolvedType === "mcq") {
+                const choices = c.editedChoices ?? c.choices ?? ["", "", "", ""];
+                return { ...base, type: "mcq" as const, choices, correctIndex: c.editedCorrectIndex ?? c.correctIndex ?? 0 };
             }
-            if (c.cardType === "tf") {
+            if (resolvedType === "tf") {
                 return { ...base, type: "tf" as const, correctValue: c.editedCorrectValue ?? c.correctValue ?? true };
             }
             return { ...base, type: "qa" as const };
@@ -106,8 +110,10 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
                 source_note: c.sourceNotePath,
                 commit_hash: c.commitHash,
                 decision: c.decision!,
+                original_type: c.cardType,
                 ...(c.editedQuestion ? { edited_question: c.editedQuestion } : {}),
                 ...(c.editedAnswer ? { edited_answer: c.editedAnswer } : {}),
+                ...(c.editedCardType && c.editedCardType !== c.cardType ? { edited_type: c.editedCardType } : {}),
             }));
 
         await onConfirm(acceptedCards, feedback);
@@ -155,13 +161,14 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
                         onRejectAll={() => setGroupDecision(group.sourceNote, "rejected")}
                         onAcceptCard={(tempId) => {
                             const card = group.cards.find((c) => c.tempId === tempId);
-                            const decision = card?.editedQuestion || card?.editedAnswer ? "edited" : "accepted";
-                            updateCard(tempId, { decision });
+                            const isEdited = card?.editedQuestion || card?.editedAnswer || card?.editedCardType;
+                            updateCard(tempId, { decision: isEdited ? "edited" : "accepted" });
                         }}
                         onRejectCard={(tempId) => updateCard(tempId, { decision: "rejected" })}
                         onEditToggle={(tempId) => setEditingCard(editingCard === tempId ? null : tempId)}
                         onUpdateQuestion={(tempId, q) => updateCard(tempId, { editedQuestion: q })}
                         onUpdateAnswer={(tempId, a) => updateCard(tempId, { editedAnswer: a })}
+                        onUpdateCardType={(tempId, type) => updateCard(tempId, { editedCardType: type })}
                         onUpdateChoices={(tempId, choices) => updateCard(tempId, { editedChoices: choices })}
                         onUpdateCorrectIndex={(tempId, index) => updateCard(tempId, { editedCorrectIndex: index })}
                         onUpdateCorrectValue={(tempId, value) => updateCard(tempId, { editedCorrectValue: value })}
@@ -203,6 +210,7 @@ function StagingFileCard({
     onEditToggle,
     onUpdateQuestion,
     onUpdateAnswer,
+    onUpdateCardType,
     onUpdateChoices,
     onUpdateCorrectIndex,
     onUpdateCorrectValue,
@@ -220,6 +228,7 @@ function StagingFileCard({
     onEditToggle: (tempId: string) => void;
     onUpdateQuestion: (tempId: string, q: string) => void;
     onUpdateAnswer: (tempId: string, a: string) => void;
+    onUpdateCardType: (tempId: string, type: CardType) => void;
     onUpdateChoices: (tempId: string, choices: string[]) => void;
     onUpdateCorrectIndex: (tempId: string, index: number) => void;
     onUpdateCorrectValue: (tempId: string, value: boolean) => void;
@@ -271,6 +280,7 @@ function StagingFileCard({
                                 onReject={() => onRejectCard(card.tempId)}
                                 onUpdateQuestion={(q) => onUpdateQuestion(card.tempId, q)}
                                 onUpdateAnswer={(a) => onUpdateAnswer(card.tempId, a)}
+                                onUpdateCardType={(t) => onUpdateCardType(card.tempId, t)}
                                 onUpdateChoices={(choices) => onUpdateChoices(card.tempId, choices)}
                                 onUpdateCorrectIndex={(i) => onUpdateCorrectIndex(card.tempId, i)}
                                 onUpdateCorrectValue={(v) => onUpdateCorrectValue(card.tempId, v)}
@@ -292,6 +302,7 @@ function StagingCard({
     onReject,
     onUpdateQuestion,
     onUpdateAnswer,
+    onUpdateCardType,
     onUpdateChoices,
     onUpdateCorrectIndex,
     onUpdateCorrectValue,
@@ -304,6 +315,7 @@ function StagingCard({
     onReject: () => void;
     onUpdateQuestion: (q: string) => void;
     onUpdateAnswer: (a: string) => void;
+    onUpdateCardType: (type: CardType) => void;
     onUpdateChoices: (choices: string[]) => void;
     onUpdateCorrectIndex: (index: number) => void;
     onUpdateCorrectValue: (value: boolean) => void;
@@ -350,6 +362,35 @@ function StagingCard({
         <div className={`echovault-staging-card ${decisionClass}`}>
             {isEditing ? (
                 <>
+                    {/* Type selector */}
+                    <label className="echovault-staging-label">Card Type</label>
+                    <div className="echovault-staging-type-selector">
+                        {(["qa", "mcq", "tf"] as CardType[]).map((t) => {
+                            const activeType = card.editedCardType ?? card.cardType;
+                            const label = t === "mcq" ? "Multiple Choice" : t === "tf" ? "True / False" : "Q & A";
+                            return (
+                                <button
+                                    key={t}
+                                    className={`echovault-staging-type-btn ${activeType === t ? "echovault-staging-type-btn-active" : ""}`}
+                                    onClick={() => {
+                                        if (activeType === t) return;
+                                        onUpdateCardType(t);
+                                        // Initialise type-specific fields on transition
+                                        if (t === "mcq") {
+                                            onUpdateChoices(card.editedChoices ?? card.choices ?? ["", "", "", ""]);
+                                            onUpdateCorrectIndex(card.editedCorrectIndex ?? card.correctIndex ?? 0);
+                                        }
+                                        if (t === "tf") {
+                                            onUpdateCorrectValue(card.editedCorrectValue ?? card.correctValue ?? true);
+                                        }
+                                    }}
+                                >
+                                    {label}
+                                </button>
+                            );
+                        })}
+                    </div>
+
                     <label className="echovault-staging-label">Question</label>
                     <textarea
                         className="echovault-staging-textarea"
@@ -357,10 +398,10 @@ function StagingCard({
                         onChange={(e) => onUpdateQuestion(e.target.value)}
                         rows={2}
                     />
-                    {card.cardType === "mcq" && (
+                    {(card.editedCardType ?? card.cardType) === "mcq" && (
                         <>
                             <label className="echovault-staging-label">Options (select correct)</label>
-                            {(card.editedChoices ?? card.choices ?? []).map((choice, i) => {
+                            {(card.editedChoices ?? card.choices ?? ["", "", "", ""]).map((choice, i) => {
                                 const currentCorrect = card.editedCorrectIndex ?? card.correctIndex ?? 0;
                                 return (
                                     <div key={i} className="echovault-staging-mcq-row">
@@ -375,7 +416,7 @@ function StagingCard({
                                             className="echovault-staging-option-input"
                                             value={choice}
                                             onChange={(e) => {
-                                                const updated = [...(card.editedChoices ?? card.choices ?? [])];
+                                                const updated = [...(card.editedChoices ?? card.choices ?? ["", "", "", ""])];
                                                 updated[i] = e.target.value;
                                                 onUpdateChoices(updated);
                                             }}
@@ -385,7 +426,7 @@ function StagingCard({
                             })}
                         </>
                     )}
-                    {card.cardType === "tf" && (
+                    {(card.editedCardType ?? card.cardType) === "tf" && (
                         <>
                             <label className="echovault-staging-label">Correct Answer</label>
                             <div className="echovault-staging-tf-toggle">

@@ -37,6 +37,12 @@ export class FlashcardStore {
             const parsed = JSON.parse(raw) as FlashcardData;
             // Migrate older data missing newer fields
             this.data = { processedFiles: {}, importQueue: [], ...parsed };
+            // Migrate cards missing reviewHistory or tags
+            this.data.cards = this.data.cards.map((c) => ({
+                ...c,
+                reviewHistory: c.reviewHistory ?? [],
+                tags: c.tags ?? [],
+            }));
         } catch {
             this.data = { version: 1, cards: [], processedFiles: {} };
             await this.save();

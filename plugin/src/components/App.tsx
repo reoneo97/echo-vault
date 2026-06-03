@@ -45,6 +45,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [generateStage, setGenerateStage] = useState<GenerateStage | null>(null);
     const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
     const [importQueueCount, setImportQueueCount] = useState(0);
+    const [reviewCards, setReviewCards] = useState<import("../types").Flashcard[] | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {
@@ -486,8 +487,9 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     <ReviewSession
                         plugin={plugin}
                         reviewAll
+                        initialCards={reviewCards ?? undefined}
                         onComplete={handleReviewComplete}
-                        onBack={() => { refreshStats(); navigateTo("browse"); }}
+                        onBack={() => { refreshStats(); setReviewCards(null); navigateTo("browse"); }}
                     />
                 )}
 
@@ -495,7 +497,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     <CardBrowser
                         plugin={plugin}
                         onBack={() => { refreshStats(); navigateTo("dashboard"); }}
-                        onReviewAll={() => navigateTo("review-all")}
+                        onReviewAll={(cards) => { setReviewCards(cards); navigateTo("review-all"); }}
                     />
                 )}
 
@@ -530,13 +532,23 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
                     />
                 )}
 
-                {panel === "import-queue" && (
-                    <ImportQueue
-                        queue={plugin.store.getImportQueue()}
-                        onImport={handleImportSelected}
-                        onBack={() => navigateTo("dashboard")}
-                    />
-                )}
+                {panel === "import-queue" && (() => {
+                    const queue = plugin.store.getImportQueue();
+                    const tagsByPath: Record<string, string[]> = {};
+                    for (const path of queue) {
+                        const cache = plugin.app.metadataCache.getCache(path);
+                        const raw = cache?.frontmatter?.tags;
+                        tagsByPath[path] = Array.isArray(raw) ? raw : raw ? [String(raw)] : [];
+                    }
+                    return (
+                        <ImportQueue
+                            queue={queue}
+                            tagsByPath={tagsByPath}
+                            onImport={handleImportSelected}
+                            onBack={() => navigateTo("dashboard")}
+                        />
+                    );
+                })()}
             </div>
         </div>
     );

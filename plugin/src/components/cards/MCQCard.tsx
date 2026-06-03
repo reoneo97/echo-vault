@@ -30,7 +30,8 @@ export function MCQCard({ card, selectedAnswer, onAnswer }: MCQCardProps) {
                         disabled={answered}
                         onClick={() => onAnswer(i)}
                     >
-                        {choice}
+                        <span className="echovault-choice-label">{String.fromCharCode(65 + i)}.</span>
+                        <span className="echovault-choice-text">{choice}</span>
                     </button>
                 );
             })}

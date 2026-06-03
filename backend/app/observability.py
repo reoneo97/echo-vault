@@ -89,8 +89,8 @@ def _setup_prometheus(app: FastAPI) -> None:
     #   http_request_duration_seconds (histogram of latency)
     #   http_requests_in_progress    (gauge of concurrent requests)
     Instrumentator(
-        should_group_status_codes=False,  # keep individual status codes
-        excluded_handlers=["/metrics"],   # don't track the metrics endpoint itself
+        should_group_status_codes=False,
+        excluded_handlers=["/metrics", "/docs", "/redoc", "/openapi.json"],
     ).instrument(app).expose(app, endpoint="/metrics")
 
     logger.info("Prometheus metrics available at /metrics")

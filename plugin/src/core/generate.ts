@@ -4,7 +4,7 @@ import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
 import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "../types";
-import { generateId, hashContent, cardBudget } from "../utils";
+import { generateId, hashContent, cardBudget, extractFrontmatterTags } from "../utils";
 
 /** Maps a backend FileResult card to the type fields needed by StagedCard. */
 function mapCardTypeFields(c: FileResult["cards"][number]): Pick<StagedCard, "cardType" | "choices" | "correctIndex" | "correctValue"> {
@@ -208,9 +208,11 @@ export async function commitAndGenerate(
         new Notice(`Processing ${MAX_FILES_PER_COMMIT_BATCH} of ${unprocessedFiles.length} changed files. ${overflow.length} more queued — use "Import Existing Notes" to continue.`);
     }
 
-    // Resolve images per file
+    // Resolve images per file and extract frontmatter tags
     const payloads: FileDiffPayload[] = [];
+    const tagsMap: Record<string, string[]> = {};
     for (const file of filesToProcess) {
+        tagsMap[file.path] = extractFrontmatterTags(file.content);
         const imageRefs = extractImageRefs(file.content);
         let images: ImageAttachment[] = [];
         if (imageRefs.length > 0) {
@@ -221,6 +223,7 @@ export async function commitAndGenerate(
             path: file.path,
             diff_content: file.content,
             max_cards: cardBudget(file.content),
+            ...(tagsMap[file.path]?.length ? { tags: tagsMap[file.path] } : {}),
             ...(images.length > 0 ? { images } : {}),
         });
     }
@@ -267,6 +270,7 @@ export async function commitAndGenerate(
         }
 
         for (const fileResult of response.file_results) {
+            const fileTags = tagsMap[fileResult.source_note] ?? [];
             const cards: StagedCard[] = fileResult.cards.map((c) => ({
                 tempId: generateId(),
                 question: c.question,
@@ -274,6 +278,7 @@ export async function commitAndGenerate(
                 sourceNotePath: fileResult.source_note,
                 commitHash: commitResult.hash,
                 decision: null,
+                tags: fileTags,
                 ...mapCardTypeFields(c),
             }));
             if (cards.length > 0) {
@@ -314,11 +319,13 @@ export async function importSelected(
     logger?.info("importSelected started", { count: filePaths.length });
 
     const payloads: FileDiffPayload[] = [];
+    const tagsMap: Record<string, string[]> = {};
     for (const filePath of filePaths) {
         try {
             const content = await vault.adapter.read(filePath);
             if (!content.trim()) continue;
 
+            tagsMap[filePath] = extractFrontmatterTags(content);
             const imageRefs = extractImageRefs(content);
             let images: ImageAttachment[] = [];
             if (imageRefs.length > 0) {
@@ -329,6 +336,7 @@ export async function importSelected(
                 path: filePath,
                 diff_content: content,
                 max_cards: cardBudget(content),
+                ...(tagsMap[filePath]?.length ? { tags: tagsMap[filePath] } : {}),
                 ...(images.length > 0 ? { images } : {}),
             });
         } catch {
@@ -378,6 +386,7 @@ export async function importSelected(
         }
 
         for (const fileResult of response.file_results) {
+            const fileTags = tagsMap[fileResult.source_note] ?? [];
             const cards: StagedCard[] = fileResult.cards.map((c) => ({
                 tempId: generateId(),
                 question: c.question,
@@ -385,6 +394,7 @@ export async function importSelected(
                 sourceNotePath: fileResult.source_note,
                 commitHash,
                 decision: null,
+                tags: fileTags,
                 ...mapCardTypeFields(c),
             }));
             if (cards.length > 0) {
@@ -441,6 +451,7 @@ export async function importVault(
 
     // Build payloads, skipping already-processed files
     const payloads: FileDiffPayload[] = [];
+    const tagsMap: Record<string, string[]> = {};
     let skippedCount = 0;
 
     for (const file of allFiles) {
@@ -453,6 +464,7 @@ export async function importVault(
                 continue;
             }
 
+            tagsMap[file.path] = extractFrontmatterTags(content);
             const imageRefs = extractImageRefs(content);
             let images: ImageAttachment[] = [];
             if (imageRefs.length > 0) {
@@ -462,6 +474,7 @@ export async function importVault(
             payloads.push({
                 path: file.path,
                 diff_content: content,
+                ...(tagsMap[file.path]?.length ? { tags: tagsMap[file.path] } : {}),
                 ...(images.length > 0 ? { images } : {}),
             });
         } catch {
@@ -521,6 +534,7 @@ export async function importVault(
         totalFailures += response.file_results.filter((fr) => fr.error).length;
 
         for (const fileResult of response.file_results) {
+            const fileTags = tagsMap[fileResult.source_note] ?? [];
             const cards: StagedCard[] = fileResult.cards.map((c) => ({
                 tempId: generateId(),
                 question: c.question,
@@ -528,6 +542,7 @@ export async function importVault(
                 sourceNotePath: fileResult.source_note,
                 commitHash,
                 decision: null,
+                tags: fileTags,
                 ...mapCardTypeFields(c),
             }));
             if (cards.length > 0) {
@@ -589,6 +604,8 @@ export async function forceGenerateFromFile(
         logger?.info("Force regenerating already-processed file", { filePath });
     }
 
+    const fileTags = extractFrontmatterTags(content);
+
     // Resolve any embedded images
     const imageRefs = extractImageRefs(content);
     let images: ImageAttachment[] = [];
@@ -601,6 +618,7 @@ export async function forceGenerateFromFile(
         path: filePath,
         diff_content: content,
         max_cards: cardBudget(content),
+        ...(fileTags.length ? { tags: fileTags } : {}),
         ...(images.length > 0 ? { images } : {}),
     };
 
@@ -639,6 +657,7 @@ export async function forceGenerateFromFile(
             tempId: generateId(),
             question: c.question,
             answer: c.answer,
+            tags: fileTags,
             sourceNotePath: fileResult.source_note,
             commitHash,
             decision: null,

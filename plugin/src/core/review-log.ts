@@ -58,6 +58,19 @@ export class ReviewLog {
         await this.save();
     }
 
+    async undoReview(correct: boolean, rating: number): Promise<void> {
+        const today = getTodayDateString();
+        const entry = this.data.sessions.find((s) => s.date === today);
+        if (!entry || entry.cardsReviewed === 0) return;
+        entry.cardsReviewed = Math.max(0, entry.cardsReviewed - 1);
+        if (correct) entry.correct = Math.max(0, entry.correct - 1);
+        entry.totalRating = Math.max(0, entry.totalRating - rating);
+        if (entry.cardsReviewed === 0) {
+            this.data.sessions = this.data.sessions.filter((s) => s.date !== today);
+        }
+        await this.save();
+    }
+
     getStreak(): number {
         if (this.data.sessions.length === 0) return 0;
 

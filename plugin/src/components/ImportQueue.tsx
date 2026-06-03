@@ -1,19 +1,31 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 interface ImportQueueProps {
     queue: string[];
+    tagsByPath: Record<string, string[]>;
     onImport: (selected: string[], onProgress: (completed: number, total: number) => void) => Promise<void>;
     onBack: () => void;
 }
 
 const MAX_SELECTION = 10;
 
-export function ImportQueue({ queue, onImport, onBack }: ImportQueueProps) {
+export function ImportQueue({ queue, tagsByPath, onImport, onBack }: ImportQueueProps) {
     const [selected, setSelected] = useState<Set<string>>(
         new Set(queue.slice(0, MAX_SELECTION))
     );
+    const [search, setSearch] = useState("");
     const [importing, setImporting] = useState(false);
     const [progress, setProgress] = useState<{ completed: number; total: number } | null>(null);
+
+    const filtered = useMemo(() => {
+        if (!search.trim()) return queue;
+        const q = search.toLowerCase().replace(/^#/, "");
+        return queue.filter((path) => {
+            const name = fileName(path).toLowerCase();
+            const tags = tagsByPath[path] ?? [];
+            return name.includes(q) || tags.some((t) => t.toLowerCase().includes(q));
+        });
+    }, [queue, search, tagsByPath]);
 
     const toggle = (path: string) => {
         setSelected((prev) => {
@@ -25,6 +37,14 @@ export function ImportQueue({ queue, onImport, onBack }: ImportQueueProps) {
             }
             return next;
         });
+    };
+
+    const selectAll = () => {
+        setSelected(new Set(filtered.slice(0, MAX_SELECTION)));
+    };
+
+    const unselectAll = () => {
+        setSelected(new Set());
     };
 
     const handleImport = async () => {
@@ -52,9 +72,36 @@ export function ImportQueue({ queue, onImport, onBack }: ImportQueueProps) {
                 </span>
             </div>
 
+            <input
+                type="text"
+                className="echovault-import-queue-search"
+                placeholder="Search by name or #tag..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                disabled={importing}
+            />
+
+            <div className="echovault-import-queue-bulk">
+                <button
+                    className="echovault-btn echovault-import-queue-bulk-btn"
+                    onClick={selectAll}
+                    disabled={importing || filtered.length === 0}
+                >
+                    Select first {Math.min(filtered.length, MAX_SELECTION)}
+                </button>
+                <button
+                    className="echovault-btn echovault-import-queue-bulk-btn"
+                    onClick={unselectAll}
+                    disabled={importing || selected.size === 0}
+                >
+                    Unselect All
+                </button>
+            </div>
+
             <ul className="echovault-import-queue-list">
-                {queue.map((path) => {
+                {filtered.map((path) => {
                     const disabled = !selected.has(path) && selected.size >= MAX_SELECTION;
+                    const tags = tagsByPath[path] ?? [];
                     return (
                         <li
                             key={path}
@@ -70,13 +117,31 @@ export function ImportQueue({ queue, onImport, onBack }: ImportQueueProps) {
                             />
                             <div className="echovault-import-queue-meta">
                                 <span className="echovault-import-queue-name">{fileName(path)}</span>
-                                {folderName(path) && (
-                                    <span className="echovault-import-queue-folder">{folderName(path)}</span>
-                                )}
+                                <div className="echovault-import-queue-bottom">
+                                    {folderName(path) && (
+                                        <span className="echovault-import-queue-folder">{folderName(path)}</span>
+                                    )}
+                                    {tags.length > 0 && (
+                                        <div className="echovault-import-queue-tags">
+                                            {tags.map((tag) => (
+                                                <span
+                                                    key={tag}
+                                                    className="echovault-import-queue-tag"
+                                                    onClick={(e) => { e.stopPropagation(); setSearch(tag); }}
+                                                >
+                                                    #{tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </li>
                     );
                 })}
+                {filtered.length === 0 && (
+                    <li className="echovault-import-queue-empty">No notes match your search.</li>
+                )}
             </ul>
 
             {progress && (

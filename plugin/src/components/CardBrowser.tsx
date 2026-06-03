@@ -8,11 +8,12 @@ import { MarkdownText } from "./MarkdownText";
 
 type SortField = "created" | "nextReview" | "easiness";
 type TypeFilter = "all" | CardType;
+type ViewMode = "flat" | "grouped";
 
 interface CardBrowserProps {
     plugin: EchoVaultPlugin;
     onBack: () => void;
-    onReviewAll: () => void;
+    onReviewAll: (cards: Flashcard[]) => void;
 }
 
 export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
@@ -20,7 +21,21 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
     const [search, setSearch] = useState("");
     const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
     const [sortField, setSortField] = useState<SortField>("created");
+    const [sourceFilter, setSourceFilter] = useState<string>("all");
+    const [tagFilter, setTagFilter] = useState<string>("all");
+    const [viewMode, setViewMode] = useState<ViewMode>("flat");
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    const sourceNotes = useMemo(() => {
+        return Array.from(new Set(cards.map((c) => c.sourceNotePath))).sort();
+    }, [cards]);
+
+    const allTags = useMemo(() => {
+        const tags = new Set<string>();
+        cards.forEach((c) => c.tags?.forEach((t) => tags.add(t)));
+        return Array.from(tags).sort();
+    }, [cards]);
 
     const filtered = useMemo(() => {
         let result = cards;
@@ -29,27 +44,51 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
             result = result.filter((c) => (c.type ?? "qa") === typeFilter);
         }
 
+        if (sourceFilter !== "all") {
+            result = result.filter((c) => c.sourceNotePath === sourceFilter);
+        }
+
+        if (tagFilter !== "all") {
+            result = result.filter((c) => c.tags?.includes(tagFilter));
+        }
+
         if (search.trim()) {
-            const q = search.toLowerCase();
+            const q = search.toLowerCase().replace(/^#/, "");
             result = result.filter(
                 (c) =>
                     c.question.toLowerCase().includes(q) ||
-                    c.answer.toLowerCase().includes(q)
+                    c.answer.toLowerCase().includes(q) ||
+                    c.tags?.some((t) => t.toLowerCase().includes(q))
             );
         }
 
-        result.sort((a, b) => {
-            if (sortField === "created") {
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            }
-            if (sortField === "nextReview") {
-                return a.nextReviewDate.localeCompare(b.nextReviewDate);
-            }
+        result = [...result].sort((a, b) => {
+            if (sortField === "created") return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (sortField === "nextReview") return a.nextReviewDate.localeCompare(b.nextReviewDate);
             return a.easinessFactor - b.easinessFactor;
         });
 
         return result;
-    }, [cards, search, typeFilter, sortField]);
+    }, [cards, search, typeFilter, sourceFilter, tagFilter, sortField]);
+
+    const grouped = useMemo(() => {
+        const map = new Map<string, Flashcard[]>();
+        for (const card of filtered) {
+            const key = card.sourceNotePath;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(card);
+        }
+        return map;
+    }, [filtered]);
+
+    const toggleGroup = (note: string) => {
+        setExpandedGroups((prev) => {
+            const next = new Set(prev);
+            if (next.has(note)) next.delete(note);
+            else next.add(note);
+            return next;
+        });
+    };
 
     const handleDelete = async (id: string) => {
         await plugin.store.deleteCard(id);
@@ -84,7 +123,7 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                 <input
                     type="text"
                     className="echovault-browser-search"
-                    placeholder="Search cards..."
+                    placeholder="Search cards or #tag..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
@@ -111,18 +150,85 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                         <option value="easiness">Difficulty</option>
                     </select>
                 </div>
+
+                <div className="echovault-browser-filters">
+                    <select
+                        className="echovault-browser-select echovault-browser-select-source"
+                        value={sourceFilter}
+                        onChange={(e) => setSourceFilter(e.target.value)}
+                    >
+                        <option value="all">All notes</option>
+                        {sourceNotes.map((note) => (
+                            <option key={note} value={note}>
+                                {note.split("/").pop()}
+                            </option>
+                        ))}
+                    </select>
+                    {allTags.length > 0 && (
+                        <select
+                            className="echovault-browser-select"
+                            value={tagFilter}
+                            onChange={(e) => setTagFilter(e.target.value)}
+                        >
+                            <option value="all">All tags</option>
+                            {allTags.map((tag) => (
+                                <option key={tag} value={tag}>#{tag}</option>
+                            ))}
+                        </select>
+                    )}
+
+                    <div className="echovault-browser-view-toggle">
+                        <button
+                            className={`echovault-browser-view-btn ${viewMode === "flat" ? "echovault-browser-view-btn-active" : ""}`}
+                            onClick={() => setViewMode("flat")}
+                            title="Flat view"
+                        >
+                            ☰
+                        </button>
+                        <button
+                            className={`echovault-browser-view-btn ${viewMode === "grouped" ? "echovault-browser-view-btn-active" : ""}`}
+                            onClick={() => setViewMode("grouped")}
+                            title="Group by note"
+                        >
+                            ⊞
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <button
                 className="echovault-btn echovault-btn-primary echovault-browser-review-all"
-                onClick={onReviewAll}
-                disabled={cards.length === 0}
+                onClick={() => onReviewAll(filtered)}
+                disabled={filtered.length === 0}
             >
-                Review All Cards ({cards.length})
+                Review {filtered.length === cards.length ? "All" : "Filtered"} Cards ({filtered.length})
             </button>
 
             <div className="echovault-browser-list">
-                {filtered.map((card) => {
+                {viewMode === "grouped" && Array.from(grouped.entries()).map(([note, noteCards]) => (
+                    <div key={note} className="echovault-browser-group">
+                        <button
+                            className="echovault-browser-group-header"
+                            onClick={() => toggleGroup(note)}
+                        >
+                            <span className={`echovault-chevron ${expandedGroups.has(note) ? "echovault-chevron-open" : ""}`}>&#9656;</span>
+                            <span className="echovault-browser-group-name">{note.split("/").pop()}</span>
+                            <span className="echovault-browser-group-path">{note}</span>
+                            <span className="echovault-browser-group-count">{noteCards.length}</span>
+                        </button>
+                        {expandedGroups.has(note) && noteCards.map((card) => renderCard(card))}
+                    </div>
+                ))}
+                {viewMode === "flat" && filtered.map((card) => renderCard(card))}
+
+                {filtered.length === 0 && (
+                    <div className="echovault-browser-empty">No cards match your filters.</div>
+                )}
+            </div>
+        </>
+    );
+
+    function renderCard(card: Flashcard) {
                     const cardType = card.type ?? "qa";
                     const isExpanded = expandedId === card.id;
                     const isDue = card.nextReviewDate <= today;
@@ -176,6 +282,21 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                                         </div>
                                     )}
 
+                                    {card.tags && card.tags.length > 0 && (
+                                        <div className="echovault-browser-tags">
+                                            {card.tags.map((tag) => (
+                                                <span
+                                                    key={tag}
+                                                    className="echovault-browser-tag"
+                                                    onClick={() => setTagFilter(tag)}
+                                                    title={`Filter by #${tag}`}
+                                                >
+                                                    #{tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <div className="echovault-browser-card-stats">
                                         <div className="echovault-browser-stat">
                                             <span className="echovault-browser-label">Source</span>
@@ -195,6 +316,24 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                                         </div>
                                     </div>
 
+                                    {card.reviewHistory && card.reviewHistory.length > 0 && (
+                                        <div className="echovault-browser-history">
+                                            <span className="echovault-browser-label">Review history</span>
+                                            <div className="echovault-browser-history-list">
+                                                {[...card.reviewHistory].reverse().map((entry, i) => (
+                                                    <div key={i} className="echovault-browser-history-row">
+                                                        <span className="echovault-browser-history-date">
+                                                            {new Date(entry.date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                                                        </span>
+                                                        <span className={`echovault-browser-history-rating echovault-history-q${entry.quality}`}>
+                                                            {entry.quality === 0 ? "Again" : entry.quality === 2 ? "Hard" : entry.quality === 4 ? "Good" : "Easy"}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <button
                                         className="echovault-btn echovault-browser-delete"
                                         onClick={() => handleDelete(card.id)}
@@ -205,14 +344,5 @@ export function CardBrowser({ plugin, onBack, onReviewAll }: CardBrowserProps) {
                             )}
                         </div>
                     );
-                })}
-
-                {filtered.length === 0 && (
-                    <div className="echovault-browser-empty">
-                        No cards match your filters.
-                    </div>
-                )}
-            </div>
-        </>
-    );
+    }
 }
