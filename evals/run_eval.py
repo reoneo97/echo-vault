@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-FIXTURES_DIR = Path(__file__).parent / "fixtures"
+FIXTURES_DIR = Path(__file__).parent / "fixtures" / "standard"
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5001")
 EXPERIMENT_NAME = "echovault-card-generation"
