@@ -1,6 +1,8 @@
 import asyncio
+import hashlib
 import json
 import logging
+import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 
 from .config import settings
 from .observability import batch_files, cards_generated, llm_errors, cards_accepted, cards_rejected, cards_edited
-from .openrouter import generate_cards_from_diff, agent_health_stream
+from .openrouter import generate_cards_from_diff, agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
     FeedbackRequest, FeedbackResponse,
@@ -51,7 +53,31 @@ async def generate_with_retry(f, path: str) -> list:
 
 @router.get("/health")
 async def health():
-    return {"status":"ok"}
+    return {"status": "ok"}
+
+
+@router.get("/config")
+async def get_config():
+    """Returns the current backend configuration for eval logging."""
+    def _git_sha() -> str:
+        try:
+            return subprocess.check_output(
+                ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+        except Exception:
+            return "unknown"
+
+    return {
+        "model": settings.openrouter_model,
+        "temperature": settings.temperature,
+        "top_p": settings.top_p,
+        "max_tokens": settings.max_tokens,
+        "max_concurrent_llm": MAX_CONCURRENT_LLM,
+        "max_retries": MAX_RETRIES,
+        "prompt_text": FLASHCARD_PROMPT,
+        "prompt_hash": hashlib.sha256(FLASHCARD_PROMPT.encode()).hexdigest()[:12],
+        "git_sha": _git_sha(),
+    }
 
 
 @router.get("/agent-health")

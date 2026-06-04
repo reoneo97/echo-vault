@@ -117,8 +117,19 @@ def main():
         return
 
     print(f"Loaded {len(notes)} notes — calling backend at {args.backend} ...")
+
+    # Fetch backend config before running — captures exact model + prompt state
+    try:
+        config = httpx.get(f"{args.backend}/config", timeout=5.0).json()
+        print(f"Backend: {config.get('model')} | temp={config.get('temperature')} | sha={config.get('git_sha')}")
+    except Exception:
+        print("Warning: could not fetch /config — model params won't be logged")
+        config = {}
+
     response, elapsed = call_backend(notes, args.backend)
     metrics = compute_metrics(response, elapsed)
+    metrics["seconds_per_card"] = round(elapsed / max(metrics.get("total_cards", 1), 1), 2)
+    total_input_words = sum(len(n["diff_content"].split()) for n in notes)
 
     print("\nMetrics:")
     for k, v in metrics.items():
@@ -132,17 +143,41 @@ def main():
     print(f"Fixture set: {fixture_version} (hash: {fixture_hash})")
 
     with mlflow.start_run() as run:
+        # Eval identity
         mlflow.log_param("prompt_version", args.prompt_version)
+
+        # Model & generation hyperparameters
+        mlflow.log_param("model", config.get("model", "unknown"))
+        mlflow.log_param("temperature", config.get("temperature", "unknown"))
+        mlflow.log_param("top_p", config.get("top_p", "unknown"))
+        mlflow.log_param("max_tokens", config.get("max_tokens", "unknown"))
+
+        # Inference config
+        mlflow.log_param("max_concurrent_llm", config.get("max_concurrent_llm", "unknown"))
+        mlflow.log_param("max_retries", config.get("max_retries", "unknown"))
+
+        # Environment
+        mlflow.log_param("git_sha", config.get("git_sha", "unknown"))
+
+        # Fixture set
         mlflow.log_param("fixture_set_version", fixture_version)
         mlflow.log_param("fixture_set_hash", fixture_hash)
-        mlflow.log_param("notes_dir", str(args.notes))
         mlflow.log_param("num_test_files", len(notes))
+        mlflow.log_param("total_input_words", total_input_words)
+
+        # Metrics
         for k, v in metrics.items():
             mlflow.log_metric(k, v)
 
-        artifact_path = Path("/tmp/echovault_eval_output.json")
-        artifact_path.write_text(json.dumps(response, indent=2))
-        mlflow.log_artifact(str(artifact_path), artifact_path="outputs")
+        # Artifacts
+        if prompt_text := config.get("prompt_text"):
+            prompt_path = Path("/tmp/echovault_prompt.txt")
+            prompt_path.write_text(prompt_text)
+            mlflow.log_artifact(str(prompt_path), artifact_path="prompt")
+
+        output_path = Path("/tmp/echovault_eval_output.json")
+        output_path.write_text(json.dumps(response, indent=2))
+        mlflow.log_artifact(str(output_path), artifact_path="outputs")
 
         print(f"\nRun ID: {run.info.run_id}")
         print(f"View at: {args.mlflow}")

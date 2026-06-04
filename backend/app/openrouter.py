@@ -30,6 +30,13 @@ model = OpenAIModel(
     provider=provider,
 )
 
+from pydantic_ai.settings import ModelSettings
+GENERATION_SETTINGS = ModelSettings(
+    temperature=settings.temperature,
+    top_p=settings.top_p,
+    max_tokens=settings.max_tokens,
+)
+
 FLASHCARD_PROMPT = """You are a flashcard generator. Given new content from a user's notes, \
 create flashcards that test understanding of the key concepts.
 
@@ -128,9 +135,9 @@ async def generate_cards_from_diff(
             message_parts.append(
                 BinaryContent(data=image_bytes, media_type=img.media_type)
             )
-        result = await flashcard_agent.run(message_parts)
+        result = await flashcard_agent.run(message_parts, model_settings=GENERATION_SETTINGS)
     else:
-        result = await flashcard_agent.run(user_message)
+        result = await flashcard_agent.run(user_message, model_settings=GENERATION_SETTINGS)
 
     llm_duration.observe(time.perf_counter() - t0)
 
