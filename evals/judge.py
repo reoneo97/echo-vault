@@ -21,6 +21,7 @@ Scores logged to MLflow (experiment: echovault-card-quality):
 """
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -177,6 +178,21 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
     return metrics, per_card
 
 
+def fixture_set_hash(notes_dir: Path) -> str:
+    h = hashlib.sha256()
+    for path in sorted(notes_dir.glob("*.md")):
+        h.update(path.name.encode())
+        h.update(path.read_bytes())
+    return h.hexdigest()[:12]
+
+
+def fixture_set_version(notes_dir: Path) -> str:
+    manifest = notes_dir / "manifest.json"
+    if manifest.exists():
+        return json.loads(manifest.read_text()).get("version", "unknown")
+    return "unknown"
+
+
 def load_notes(notes_dir: Path) -> list[dict]:
     notes = []
     for path in sorted(notes_dir.glob("*.md")):
@@ -230,9 +246,14 @@ def main():
     mlflow.set_tracking_uri(args.mlflow)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
+    fixture_hash = fixture_set_hash(args.notes)
+    fixture_version = fixture_set_version(args.notes)
+
     with mlflow.start_run() as run:
         mlflow.log_param("prompt_version", args.prompt_version)
         mlflow.log_param("judge_model", JUDGE_MODEL)
+        mlflow.log_param("fixture_set_version", fixture_version)
+        mlflow.log_param("fixture_set_hash", fixture_hash)
         mlflow.log_param("notes_dir", str(args.notes))
         for k, v in metrics.items():
             mlflow.log_metric(k, v)

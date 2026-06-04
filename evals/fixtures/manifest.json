@@ -1,0 +1,84 @@
+{
+  "version": "v1",
+  "created": "2026-06-04",
+  "description": "Initial real-vault fixture set. Mix of course notes (CS6515, CS6601, CS7643, CME295) and paper reviews (attention, ReAct). Covers algorithms, classical AI, deep learning, and LLMs.",
+  "notes": [
+    {
+      "file": "attention.md",
+      "source": "notes/nlp/attention.md",
+      "topic": "Transformer attention mechanism",
+      "tags": ["attention", "paper", "nlp"],
+      "why": "Foundational paper notes with well-defined facts — ideal for testing understanding vs recall"
+    },
+    {
+      "file": "GA-Dynamic-Programming.md",
+      "source": "courses/CS6515-GA/GA-Dynamic-Programming.md",
+      "topic": "Dynamic programming algorithms",
+      "tags": ["algorithms", "dynamic-programming", "course"],
+      "why": "Structured course notes with algorithmic concepts — clear correct answers, good MCQ material"
+    },
+    {
+      "file": "CS6601-BayesNets.md",
+      "source": "courses/CS6601-AI/CS6601-BayesNets.md",
+      "topic": "Bayesian networks",
+      "tags": ["ai", "bayesian-networks", "course"],
+      "why": "Probability and inference concepts with precise definitions — good for T/F and MCQ"
+    },
+    {
+      "file": "CS7643-M1L3-Optimization.md",
+      "source": "courses/CS7643-DL/CS7643-M1L3-Optimization.md",
+      "topic": "Deep learning optimization",
+      "tags": ["deep-learning", "course"],
+      "why": "Covers SGD, Adam, regularisation — lots of MCQ potential around hyperparameters and trade-offs"
+    },
+    {
+      "file": "CS6601-Search.md",
+      "source": "courses/CS6601-AI/CS6601-Search.md",
+      "topic": "AI search algorithms",
+      "tags": ["ai", "search", "course"],
+      "why": "Classic CS search algorithms (A*, BFS, DFS) — well-defined complexity and properties"
+    },
+    {
+      "file": "ReAct---Reason-and-Act.md",
+      "source": "ai-agents/ReAct---Reason-and-Act.md",
+      "topic": "ReAct paper — reasoning and acting in LLM agents",
+      "tags": ["paper", "nlp"],
+      "why": "Paper review with concept-heavy content — tests understanding of a specific approach"
+    },
+    {
+      "file": "CME295-LLM-Tuning.md",
+      "source": "courses/CME295-LLM/CME295-LLM-Tuning.md",
+      "topic": "LLM fine-tuning techniques",
+      "tags": ["llm", "fine-tuning", "course"],
+      "why": "Directly relevant to current work — modern content with practical trade-offs"
+    },
+    {
+      "file": "CS7643-M2L1-CNN.md",
+      "source": "courses/CS7643-DL/CS7643-M2L1-CNN.md",
+      "topic": "Convolutional neural networks",
+      "tags": ["deep-learning", "course"],
+      "why": "Visual concepts (filters, pooling, receptive fields) that translate well to MCQ"
+    },
+    {
+      "file": "binary_search.md",
+      "source": "evals/fixtures/binary_search.md",
+      "topic": "Binary search algorithm",
+      "tags": ["algorithms"],
+      "why": "Original fixture — kept as a simple baseline reference"
+    },
+    {
+      "file": "transformer_attention.md",
+      "source": "evals/fixtures/transformer_attention.md",
+      "topic": "Transformer attention (written)",
+      "tags": ["deep-learning"],
+      "why": "Original fixture — complements the real attention.md note"
+    },
+    {
+      "file": "sql_indexes.md",
+      "source": "evals/fixtures/sql_indexes.md",
+      "topic": "SQL indexes",
+      "tags": ["databases"],
+      "why": "Original fixture — kept for coverage of non-ML topics"
+    }
+  ]
+}

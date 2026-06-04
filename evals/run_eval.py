@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import os
 import time
@@ -35,6 +36,23 @@ def load_notes(notes_dir: Path) -> list[dict]:
         if content.strip():
             notes.append({"path": path.name, "diff_content": content, "max_cards": 10})
     return notes
+
+
+def fixture_set_hash(notes_dir: Path) -> str:
+    """SHA256 of all fixture file contents sorted by name. Changes if any note is edited."""
+    h = hashlib.sha256()
+    for path in sorted(notes_dir.glob("*.md")):
+        h.update(path.name.encode())
+        h.update(path.read_bytes())
+    return h.hexdigest()[:12]
+
+
+def fixture_set_version(notes_dir: Path) -> str:
+    """Read version from manifest.json if present, else return 'unknown'."""
+    manifest = notes_dir / "manifest.json"
+    if manifest.exists():
+        return json.loads(manifest.read_text()).get("version", "unknown")
+    return "unknown"
 
 
 def call_backend(notes: list[dict], backend_url: str) -> tuple[dict, float]:
@@ -109,8 +127,14 @@ def main():
     mlflow.set_tracking_uri(args.mlflow)
     mlflow.set_experiment(EXPERIMENT_NAME)
 
+    fixture_hash = fixture_set_hash(args.notes)
+    fixture_version = fixture_set_version(args.notes)
+    print(f"Fixture set: {fixture_version} (hash: {fixture_hash})")
+
     with mlflow.start_run() as run:
         mlflow.log_param("prompt_version", args.prompt_version)
+        mlflow.log_param("fixture_set_version", fixture_version)
+        mlflow.log_param("fixture_set_hash", fixture_hash)
         mlflow.log_param("notes_dir", str(args.notes))
         mlflow.log_param("num_test_files", len(notes))
         for k, v in metrics.items():
