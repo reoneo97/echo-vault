@@ -34,15 +34,14 @@
 Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI + Docker)
 ┌──────────────────────────────┐         ┌──────────────────────────────┐
 │  Git ops (commit, diff)      │         │  OpenRouter LLM API          │
-│  Flashcard storage           │── diff ─▶  Prometheus metrics          │
-│  SM-2 scheduling             │◀─ cards ─│  Logfire tracing             │
+│  Flashcard storage           │── diff ─▶  Logfire tracing             │
+│  SM-2 scheduling             │◀─ cards ─│                              │
 │  React sidebar UI            │         └──────────────────────────────┘
-└──────────────────────────────┘                    │
-                                         ┌──────────▼───────────┐
-                                         │  Grafana dashboard   │
-                                         │  :3000               │
-                                         └──────────────────────┘
+└──────────────────────────────┘
 ```
+
+(Prometheus + Grafana were removed for now — a single-user tool run manually
+doesn't get much from live dashboards; MLflow covers the eval/backtest side.)
 
 - **Plugin** handles everything local: UI, git, storage, review scheduling
 - **Backend** handles LLM calls, metrics, and tracing — runs in Docker
@@ -72,13 +71,12 @@ LOGFIRE_TOKEN=pylf_...        # optional — omit to disable tracing
 make up
 ```
 
-This builds and starts the backend, Prometheus, and Grafana in Docker:
+This builds and starts the backend + MLflow in Docker:
 
 | Service | URL |
 |---|---|
 | Backend API | http://localhost:8000 |
-| Grafana dashboard | http://localhost:3000 (admin / admin) |
-| Prometheus | http://localhost:9090 |
+| MLflow | http://localhost:5001 |
 
 Verify the backend is healthy:
 ```bash
@@ -167,12 +165,12 @@ Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Aga
 
 ```
 echo-vault/
-├── docker-compose.yml     # starts backend + Prometheus + Grafana
+├── docker-compose.yml     # starts backend + MLflow
 ├── Makefile               # make up / down / logs / install / test
 ├── plugin/                # Obsidian plugin (TypeScript + React)
 ├── backend/
 │   ├── Dockerfile
 │   ├── app/               # FastAPI application
-│   └── monitoring/        # Prometheus + Grafana config
+│   └── monitoring/        # Prometheus + Grafana config (unused for now, kept for later)
 └── vault/                 # Test vault for development
 ```

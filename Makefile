@@ -24,8 +24,6 @@ up:
 	docker compose up -d --build
 	@echo ""
 	@echo "  Backend    → http://localhost:8000"
-	@echo "  Grafana    → http://localhost:3000  (admin / admin)"
-	@echo "  Prometheus → http://localhost:9090"
 	@echo "  MLflow     → http://localhost:5001"
 
 down:
