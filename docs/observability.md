@@ -1,5 +1,13 @@
 # EchoVault Observability
 
+> **REMOVED as of 2026-09-04.** Prometheus + Grafana were taken out of
+> `docker-compose.yml` (single-user tool run manually — live dashboards weren't
+> earning their keep; MLflow covers the eval/backtest side). The backend's
+> `/metrics` endpoint (`app/observability.py`) and the configs under
+> `backend/monitoring/` are still in the tree, just unused — kept in case this
+> becomes a long-running/scheduled service later. This document is kept as a
+> reference for what the stack looked like and how to bring it back.
+
 This document explains how monitoring is wired into the EchoVault backend, what each component does, and how to use it to understand the system's behaviour in production.
 
 ---

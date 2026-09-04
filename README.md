@@ -167,7 +167,7 @@ Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Aga
 echo-vault/
 ├── docker-compose.yml     # starts backend + MLflow
 ├── Makefile               # make up / down / logs / install / test
-├── docs/                  # roadmap for evals/experiments/fine_tuning (docs/ROADMAP.md)
+├── docs/                  # ROADMAP.md, EVAL.md (eval design), observability.md (removed stack)
 ├── evals/                 # evaluation harness -- structural, LLM-judge, dedup, backtest
 ├── plugin/                # Obsidian plugin (TypeScript + React)
 ├── backend/

@@ -2,7 +2,7 @@
 
 What the empty-looking `evals/`, `backend/experiments/`, and `backend/fine_tuning/`
 directories are actually for — their real status, not just the wishlist. See
-`evals/EVAL.md` for the full evaluation design; this page is the map across all
+`docs/EVAL.md` for the full evaluation design; this page is the map across all
 three, plus the parts that are just future plans.
 
 ## `evals/` — built, in active use
@@ -12,7 +12,7 @@ metrics, LLM-as-judge scoring (clarity, answer quality, distractor quality,
 groundedness, cognitive-level), embedding-based duplicate detection, and a
 historical backtest built from real production logs. See `evals/README.md` for
 commands (`make eval` / `make judge` / `make dedup` / `make backtest`) and
-`evals/EVAL.md` for the three-layer design (structural → LLM-judge → human/SM-2
+`docs/EVAL.md` for the three-layer design (structural → LLM-judge → human/SM-2
 signal) and the key decisions behind it (judge model selection, rubric design,
 single-annotator reasoning).
 
@@ -39,7 +39,7 @@ inactive — reach for `evals/` first.
 
 ## `backend/fine_tuning/` — real future work, not started
 
-Genuinely forward-looking, building on `evals/EVAL.md`'s Layer 3 design (human
+Genuinely forward-looking, building on `docs/EVAL.md`'s Layer 3 design (human
 signal via `feedback.jsonl` + SM-2 review outcomes). The path, in order:
 
 1. **Training data collection** — export high-quality cards as labeled
