@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { App } from "obsidian";
-import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry, CardType } from "../types";
-import { generateId, nowISO, getTodayDateString } from "../utils";
+import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry, CardType } from "../core/types";
+import { generateId, nowISO, getTodayDateString } from "../core/utils";
 import { MarkdownText } from "./MarkdownText";
 
 interface StagingPanelProps {

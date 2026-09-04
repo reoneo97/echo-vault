@@ -3,8 +3,8 @@ import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit, gitHasCo
 import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
-import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "../types";
-import { generateId, hashContent, cardBudget, extractFrontmatterTags } from "../utils";
+import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "./types";
+import { generateId, hashContent, cardBudget, extractFrontmatterTags } from "./utils";
 
 /** Maps a backend FileResult card to the type fields needed by StagedCard. */
 function mapCardTypeFields(c: FileResult["cards"][number]): Pick<StagedCard, "cardType" | "choices" | "correctIndex" | "correctValue"> {

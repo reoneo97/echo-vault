@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateId, getTodayDateString, nowISO } from "../utils";
+import { generateId, getTodayDateString, nowISO } from "../core/utils";
 
 describe("generateId", () => {
     it("returns an 8-character string", () => {

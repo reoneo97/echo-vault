@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
-import { Flashcard, CardType, GenerationResult, CardFeedbackEntry } from "../types";
+import { Flashcard, CardType, GenerationResult, CardFeedbackEntry } from "../core/types";
 import { isOwnGitRepo, gitInit, gitRemoveRepo, gitStatus, gitHasEchoVaultCommits, StatusEntry } from "../core/git";
 import { checkBackendHealth, sendFeedback } from "../core/api-client";
 import { GenerateStage, importSelected } from "../core/generate";
-import { generateId, getTodayDateString, nowISO, questionSimilarity } from "../utils";
+import { generateId, getTodayDateString, nowISO, questionSimilarity } from "../core/utils";
 import { Header } from "./Header";
 import { Dashboard } from "./Dashboard";
 import { ReviewSession } from "./ReviewSession";
@@ -45,7 +45,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
     const [generateStage, setGenerateStage] = useState<GenerateStage | null>(null);
     const [generationResult, setGenerationResult] = useState<GenerationResult | null>(null);
     const [importQueueCount, setImportQueueCount] = useState(0);
-    const [reviewCards, setReviewCards] = useState<import("../types").Flashcard[] | null>(null);
+    const [reviewCards, setReviewCards] = useState<import("../core/types").Flashcard[] | null>(null);
     const panelRef = useRef<HTMLDivElement>(null);
 
     const navigateTo = useCallback((next: Panel) => {

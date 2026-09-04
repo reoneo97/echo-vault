@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import type EchoVaultPlugin from "../main";
-import { Flashcard } from "../types";
+import { Flashcard } from "../core/types";
 import { sm2 } from "../core/sm2";
-import { nowISO } from "../utils";
+import { nowISO } from "../core/utils";
 import { MCQCard } from "./cards/MCQCard";
 import { TFCard } from "./cards/TFCard";
 import { RatingButtons } from "./cards/RatingButtons";

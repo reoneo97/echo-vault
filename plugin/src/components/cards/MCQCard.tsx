@@ -1,4 +1,4 @@
-import { MCQFlashcard } from "../../types";
+import { MCQFlashcard } from "../../core/types";
 
 interface MCQCardProps {
     card: MCQFlashcard;

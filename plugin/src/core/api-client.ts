@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { EchoVaultSettings, FileDiffPayload, BatchGenerateResponse, CardFeedbackEntry } from "../types";
+import { EchoVaultSettings, FileDiffPayload, BatchGenerateResponse, CardFeedbackEntry } from "./types";
 
 export async function checkBackendHealth(
     settings: EchoVaultSettings

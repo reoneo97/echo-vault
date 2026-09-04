@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type EchoVaultPlugin from "./main";
+import type EchoVaultPlugin from "../main";
 
 export class EchoVaultSettingTab extends PluginSettingTab {
     plugin: EchoVaultPlugin;

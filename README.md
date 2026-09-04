@@ -167,10 +167,14 @@ Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Aga
 echo-vault/
 ├── docker-compose.yml     # starts backend + MLflow
 ├── Makefile               # make up / down / logs / install / test
+├── docs/                  # roadmap for evals/experiments/fine_tuning (docs/ROADMAP.md)
+├── evals/                 # evaluation harness -- structural, LLM-judge, dedup, backtest
 ├── plugin/                # Obsidian plugin (TypeScript + React)
 ├── backend/
 │   ├── Dockerfile
 │   ├── app/               # FastAPI application
+│   ├── experiments/       # mostly superseded by evals/ -- see docs/ROADMAP.md
+│   ├── fine_tuning/       # future work, not started -- see docs/ROADMAP.md
 │   └── monitoring/        # Prometheus + Grafana config (unused for now, kept for later)
 └── vault/                 # Test vault for development
 ```

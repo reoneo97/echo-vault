@@ -1,6 +1,6 @@
 import { Vault } from "obsidian";
-import { EchoVaultSettings } from "../types";
-import { getTodayDateString } from "../utils";
+import { EchoVaultSettings } from "./types";
+import { getTodayDateString } from "./utils";
 
 export interface ReviewEntry {
     date: string;
