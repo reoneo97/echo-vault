@@ -1,21 +1,33 @@
 import { Notice, Plugin } from "obsidian";
-import { DEFAULT_SETTINGS, EchoVaultSettings } from "./types";
+import { DEFAULT_SETTINGS, EchoVaultSettings, GenerationResult } from "./types";
 import { EchoVaultSettingTab } from "./settings";
-import { FlashcardStore } from "./store";
-import { checkBackendHealth } from "./api-client";
-import { commitAndGenerate } from "./generate";
+import { FlashcardStore } from "./core/store";
+import { ReviewLog } from "./core/review-log";
+import { Logger } from "./core/logger";
+import { checkBackendHealth } from "./core/api-client";
+import { commitAndGenerate, forceGenerateFromFile, importVault, GenerateStage } from "./core/generate";
+import { setGitLogger } from "./core/git";
 import { EchoVaultSidebarView, VIEW_TYPE } from "./sidebar-view";
 
 export default class EchoVaultPlugin extends Plugin {
     settings: EchoVaultSettings = DEFAULT_SETTINGS;
     store!: FlashcardStore;
+    reviewLog!: ReviewLog;
+    logger!: Logger;
     private statusBarEl: HTMLElement | null = null;
 
     async onload() {
         await this.loadSettings();
 
+        this.logger = new Logger(this.app.vault, this.settings);
+        this.logger.info("Plugin loading");
+        setGitLogger(this.logger);
+
         this.store = new FlashcardStore(this.app.vault, this.settings);
         await this.store.load();
+
+        this.reviewLog = new ReviewLog(this.app.vault, this.settings);
+        await this.reviewLog.load();
 
         // Settings tab
         this.addSettingTab(new EchoVaultSettingTab(this.app, this));
@@ -36,6 +48,25 @@ export default class EchoVaultPlugin extends Plugin {
             callback: () => this.activateSidebar(),
         });
 
+        this.addCommand({
+            id: "import-vault",
+            name: "Import All Notes (Generate Cards from Entire Vault)",
+            callback: () => this.importVault(),
+        });
+
+        this.addCommand({
+            id: "force-regenerate-active-file",
+            name: "Regenerate Cards from Active File",
+            checkCallback: (checking) => {
+                const file = this.app.workspace.getActiveFile();
+                if (file && file.extension === "md") {
+                    if (!checking) this.forceRegenerateFromFile(file.path);
+                    return true;
+                }
+                return false;
+            },
+        });
+
         // Ribbon icon opens the sidebar
         this.addRibbonIcon("brain", "Open EchoVault", () =>
             this.activateSidebar()
@@ -49,15 +80,18 @@ export default class EchoVaultPlugin extends Plugin {
         const healthy = await checkBackendHealth(this.settings);
         if (healthy) {
             new Notice("Connected to EchoVault backend");
+            this.logger.info("Backend connected", { url: this.settings.backendUrl });
         } else {
             new Notice("EchoVault backend not reachable. Check settings.");
+            this.logger.warn("Backend not reachable", { url: this.settings.backendUrl });
         }
 
-        console.log("EchoVault loaded");
+        this.logger.info("Plugin loaded");
     }
 
-    onunload() {
-        console.log("EchoVault unloaded");
+    async onunload() {
+        this.logger.info("Plugin unloading");
+        await this.logger.flush();
     }
 
     async loadSettings() {
@@ -80,16 +114,40 @@ export default class EchoVaultPlugin extends Plugin {
         throw new Error("Could not determine vault path");
     }
 
-    async commitAndGenerate() {
+    async commitAndGenerate(onProgress?: (stage: GenerateStage) => void): Promise<GenerationResult | null> {
         try {
             const vaultPath = this.getVaultPath();
-            await commitAndGenerate(vaultPath, this.store, this.settings);
-            this.updateStatusBar();
-            this.refreshSidebar();
+            const result = await commitAndGenerate(vaultPath, this.app.vault, this.store, this.settings, this.logger, onProgress);
+            return result;
         } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);
             new Notice(`EchoVault error: ${msg}`);
-            console.error("EchoVault:", e);
+            this.logger.error("commitAndGenerate failed", { error: msg });
+            throw e;
+        }
+    }
+
+    async forceRegenerateFromFile(filePath: string): Promise<GenerationResult | null> {
+        try {
+            const vaultPath = this.getVaultPath();
+            return await forceGenerateFromFile(filePath, vaultPath, this.app.vault, this.store, this.settings, this.logger);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            new Notice(`EchoVault error: ${msg}`);
+            this.logger.error("forceRegenerateFromFile failed", { error: msg });
+            throw e;
+        }
+    }
+
+    async importVault(): Promise<GenerationResult | null> {
+        try {
+            const vaultPath = this.getVaultPath();
+            return await importVault(vaultPath, this.app.vault, this.store, this.settings, this.logger);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            new Notice(`EchoVault error: ${msg}`);
+            this.logger.error("importVault failed", { error: msg });
+            throw e;
         }
     }
 

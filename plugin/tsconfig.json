@@ -11,8 +11,9 @@
         "importHelpers": true,
         "isolatedModules": true,
         "strictNullChecks": true,
+        "jsx": "react-jsx",
         "lib": ["ES2020", "DOM"],
         "outDir": "./dist"
     },
-    "include": ["src/**/*.ts"]
+    "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

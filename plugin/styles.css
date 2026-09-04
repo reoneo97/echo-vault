@@ -1,10 +1,194 @@
 /* Sidebar */
 .echovault-sidebar {
-    padding: 16px;
+    padding: clamp(12px, 2vw, 20px);
+    font-size: clamp(0.85em, 1.2vw, 1em);
+}
+
+/* Header */
+.echovault-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.echovault-header-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 4px;
+}
+
+.echovault-info-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    line-height: 0;
+}
+
+.echovault-info-btn:hover {
+    color: var(--text-normal);
+    background: var(--background-secondary);
+}
+
+/* Breadcrumb */
+.echovault-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 12px;
+    font-size: 0.8em;
+}
+
+.echovault-breadcrumb-link {
+    background: none;
+    border: none;
+    color: var(--interactive-accent);
+    cursor: pointer;
+    padding: 4px 12px;
+    font-size: inherit;
+}
+
+.echovault-breadcrumb-link:hover {
+    text-decoration: underline;
+}
+
+.echovault-breadcrumb-sep {
+    color: var(--text-faint);
+}
+
+.echovault-breadcrumb-current {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+/* Panel transitions */
+.echovault-panel-enter {
+    animation: echovault-panel-in 0.2s ease-out;
+}
+
+@keyframes echovault-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Empty state */
+.echovault-empty {
+    text-align: center;
+    padding: 32px 16px;
+}
+
+.echovault-empty-icon {
+    color: var(--text-faint);
+    margin-bottom: 12px;
+}
+
+.echovault-empty-title {
+    margin: 0 0 8px 0;
+    font-size: 1.1em;
+}
+
+.echovault-empty-desc {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin: 0 0 20px 0;
+}
+
+.echovault-empty-action {
+    max-width: 240px;
+    margin: 0 auto;
+}
+
+.echovault-logo {
+    color: var(--interactive-accent);
+    margin-bottom: 4px;
+    line-height: 0;
 }
 
 .echovault-sidebar-title {
-    margin: 0 0 16px 0;
+    margin: 0 0 8px 0;
+}
+
+.echovault-git-status {
+    font-size: 0.75em;
+    padding: 2px 10px;
+    border-radius: 12px;
+    line-height: 1.4;
+}
+
+.echovault-git-active {
+    background: var(--background-modifier-success);
+    color: var(--color-green);
+}
+
+.echovault-git-inactive {
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+/* Init */
+.echovault-init {
+    padding: 16px 0;
+}
+
+.echovault-init-pitch {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.echovault-init-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.echovault-init-feature svg {
+    flex-shrink: 0;
+    color: var(--interactive-accent);
+    margin-top: 2px;
+}
+
+.echovault-init-feature div {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.echovault-init-feature strong {
+    font-size: 0.95em;
+}
+
+.echovault-init-feature span {
+    font-size: 0.85em;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.echovault-init-cta {
+    text-align: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-init-cta p {
+    color: var(--text-muted);
+    font-size: 0.85em;
+    margin-bottom: 14px;
+    line-height: 1.5;
 }
 
 /* Stats */
@@ -33,12 +217,217 @@
     margin-top: 4px;
 }
 
+/* Forecast */
+.echovault-forecast {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.echovault-forecast-item strong {
+    color: var(--text-normal);
+}
+
+.echovault-today-stats {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border-radius: 6px;
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.echovault-today-stat strong {
+    color: var(--text-normal);
+}
+
+/* Review heatmap */
+.echovault-heatmap {
+    margin-bottom: 16px;
+    padding: 10px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-heatmap-label {
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+    text-align: center;
+}
+
+.echovault-heatmap-grid {
+    display: flex;
+    gap: 2px;
+    max-width: 280px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.echovault-heatmap-days {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-right: 4px;
+}
+
+.echovault-heatmap-day-label {
+    width: 18px;
+    aspect-ratio: 1;
+    font-size: 0.55em;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+}
+
+.echovault-heatmap-weeks {
+    display: flex;
+    gap: 2px;
+    flex: 1;
+}
+
+.echovault-heatmap-week {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.echovault-heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 2px;
+}
+
+.echovault-heatmap-level-0 {
+    background: var(--background-primary);
+}
+
+.echovault-heatmap-level-1 {
+    background: var(--interactive-accent);
+    opacity: 0.25;
+}
+
+.echovault-heatmap-level-2 {
+    background: var(--interactive-accent);
+    opacity: 0.5;
+}
+
+.echovault-heatmap-level-3 {
+    background: var(--interactive-accent);
+    opacity: 0.75;
+}
+
+.echovault-heatmap-level-4 {
+    background: var(--interactive-accent);
+    opacity: 1;
+}
+
+.echovault-heatmap-legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 6px;
+}
+
+.echovault-heatmap-legend .echovault-heatmap-cell {
+    width: 10px;
+    height: 10px;
+}
+
+.echovault-heatmap-legend-label {
+    font-size: 0.6em;
+    color: var(--text-faint);
+    margin: 0 2px;
+}
+
+/* Markdown rendered content in review cards */
+.echovault-md {
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+}
+
+.echovault-md p {
+    margin: 0 0 8px 0;
+}
+
+.echovault-md p:last-child {
+    margin-bottom: 0;
+}
+
+.echovault-md code {
+    font-size: 0.9em;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--background-primary);
+}
+
+.echovault-md pre {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: var(--background-primary);
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.echovault-md pre code {
+    padding: 0;
+    background: none;
+}
+
+.echovault-md ul,
+.echovault-md ol {
+    padding-left: 20px;
+    margin: 4px 0;
+}
+
+.echovault-md strong {
+    font-weight: 700;
+}
+
+.echovault-md blockquote {
+    border-left: 3px solid var(--interactive-accent);
+    padding-left: 12px;
+    margin: 8px 0;
+    color: var(--text-muted);
+}
+
+.echovault-md img,
+.echovault-md .image-embed img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+    margin: 6px 0;
+}
+
+.echovault-md .internal-embed {
+    display: block;
+}
+
+.echovault-md .internal-embed.image-embed {
+    line-height: 0;
+}
+
 /* Actions */
 .echovault-actions {
     display: flex;
     flex-direction: column;
     gap: 8px;
     margin-bottom: 20px;
+    max-width: max(240px, 25vw);
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Review header */
@@ -46,7 +435,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
+}
+
+.echovault-review-header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .echovault-btn-back {
@@ -54,9 +449,215 @@
     font-size: 0.85em;
 }
 
+.echovault-btn-finish-early {
+    padding: 4px 12px;
+    font-size: 0.85em;
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
+/* Navigation bar */
+.echovault-review-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    gap: 8px;
+}
+
+.echovault-review-nav-btn {
+    font-size: 1.1em;
+    padding: 6px 18px;
+    min-width: 48px;
+}
+
+.echovault-review-nav-pos {
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+/* Previously rated card */
+.echovault-prev-rating {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+}
+
+.echovault-btn-undo-rating {
+    width: 100%;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 0.85em;
+}
+
+.echovault-btn-undo-rating:hover {
+    color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
 .echovault-progress {
     font-size: 0.85em;
     color: var(--text-muted);
+}
+
+/* Progress bar */
+.echovault-progress-bar {
+    height: 4px;
+    background: var(--background-secondary);
+    border-radius: 2px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.echovault-progress-bar-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+/* Card flip animation */
+.echovault-card-flip {
+    transition: transform 0.2s ease;
+}
+
+.echovault-card-flip-revealed {
+    transform: scale(1);
+}
+
+/* Answer reveal animation */
+.echovault-answer-reveal {
+    animation: echovault-slide-up 0.25s ease-out;
+}
+
+@keyframes echovault-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Keyboard shortcut hints */
+.echovault-shortcut-hint {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.2);
+    margin-left: 6px;
+    opacity: 0.7;
+    vertical-align: middle;
+}
+
+.echovault-btn-show .echovault-shortcut-hint {
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+/* Card type badge */
+.echovault-card-type {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+}
+
+.echovault-card-type-qa {
+    background: var(--interactive-accent);
+    color: white;
+    opacity: 0.85;
+}
+
+.echovault-card-type-mcq {
+    background: var(--color-blue);
+    color: white;
+    opacity: 0.85;
+}
+
+.echovault-card-type-tf {
+    background: var(--color-orange);
+    color: white;
+    opacity: 0.85;
+}
+
+/* Choices (MCQ + TF) */
+.echovault-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+}
+
+.echovault-tf-choices {
+    flex-direction: row;
+}
+
+.echovault-btn-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    height: auto;
+    min-height: unset;
+    padding: 12px;
+    text-align: left;
+    font-size: 0.9em;
+    white-space: normal;
+    line-height: 1.4;
+}
+
+.echovault-choice-label {
+    flex-shrink: 0;
+    font-weight: 600;
+    min-width: 18px;
+}
+
+.echovault-choice-text {
+    flex: 1;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+}
+
+.echovault-tf-choices .echovault-btn-choice {
+    flex: 1;
+}
+
+.echovault-btn-choice-correct {
+    background: var(--color-green);
+    color: white;
+    border-color: var(--color-green);
+}
+
+.echovault-btn-choice-correct:hover {
+    background: var(--color-green);
+}
+
+.echovault-btn-choice-incorrect {
+    background: var(--text-error);
+    color: white;
+    border-color: var(--text-error);
+}
+
+.echovault-btn-choice-incorrect:hover {
+    background: var(--text-error);
+}
+
+.echovault-btn-choice-disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* Cards */
@@ -64,7 +665,12 @@
     font-size: 1.1em;
     font-weight: 600;
     margin-bottom: 16px;
+    padding: 14px;
     line-height: 1.5;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .echovault-answer {
@@ -72,8 +678,25 @@
     margin-bottom: 20px;
     padding: 14px;
     background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
     border-radius: 8px;
     line-height: 1.5;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.echovault-answer-correct {
+    border-color: var(--color-green);
+}
+
+.echovault-answer-incorrect {
+    border-color: var(--color-orange);
+}
+
+.echovault-answer-feedback {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 0.9em;
 }
 
 /* Buttons */
@@ -103,63 +726,1771 @@
 }
 
 .echovault-btn-primary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     background: var(--interactive-accent);
     color: white;
     border-color: var(--interactive-accent);
     width: 100%;
-    padding: 10px;
+    padding: 16px;
 }
 
 .echovault-btn-primary:hover {
     opacity: 0.9;
 }
 
-.echovault-btn-show {
-    display: block;
+.echovault-draft-input {
     width: 100%;
-    padding: 10px;
+    resize: vertical;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+    line-height: 1.5;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.echovault-draft-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-btn-show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 16px;
     font-size: 0.95em;
 }
 
-.echovault-btn-again {
+.echovault-btn-again,
+.echovault-btn-hard,
+.echovault-btn-good,
+.echovault-btn-easy {
     flex: 1;
-    background: var(--text-error);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: white;
+}
+
+.echovault-btn-again {
+    background: var(--text-error);
     border-color: var(--text-error);
 }
 
 .echovault-btn-hard {
-    flex: 1;
     background: var(--color-orange);
-    color: white;
     border-color: var(--color-orange);
 }
 
 .echovault-btn-good {
+    background: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
+.echovault-btn-easy {
+    background: var(--color-green);
+    border-color: var(--color-green);
+}
+
+/* Progress bar */
+.echovault-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.echovault-progress-bar {
+    height: 4px;
+    background: var(--background-modifier-border);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.echovault-progress-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.echovault-progress-step {
+    font-size: 0.72em;
+    color: var(--text-faint);
+    text-align: center;
+}
+
+/* Changed files list */
+.echovault-changed-files {
+    margin-bottom: 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-changed-files-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+.echovault-changed-files-toggle:hover {
+    color: var(--text-normal);
+}
+
+.echovault-chevron {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.echovault-chevron-open {
+    transform: rotate(90deg);
+}
+
+.echovault-changed-files-list {
+    list-style: none;
+    margin: 0;
+    padding: 4px 0;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.echovault-changed-files-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 12px;
+    font-size: 0.78em;
+    font-family: var(--font-monospace);
+}
+
+.echovault-file-status {
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.echovault-file-status-m { color: var(--color-orange); }
+.echovault-file-status-d { color: var(--text-error); }
+.echovault-file-status-new { color: var(--color-green); }
+.echovault-file-status-a { color: var(--color-green); }
+
+.echovault-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.echovault-file-deleted {
+    text-decoration: line-through;
+    opacity: 0.5;
+}
+
+.echovault-file-more {
+    color: var(--text-faint);
+    font-style: italic;
+    padding: 3px 12px;
+    font-size: 0.78em;
+}
+
+.echovault-dev-section {
+    margin-top: 16px;
+    padding-top: 4px;
+}
+
+.echovault-dev-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 4px 0;
+    background: none;
+    border: none;
+    border-top: 1px solid var(--background-modifier-border);
+    color: var(--text-faint);
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    margin-bottom: 6px;
+}
+
+.echovault-dev-toggle:hover {
+    color: var(--text-muted);
+}
+
+.echovault-dev-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    color: var(--text-faint);
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.echovault-dev-divider::before,
+.echovault-dev-divider::after {
+    content: "";
     flex: 1;
+    height: 1px;
+    background: var(--background-modifier-border);
+}
+
+.echovault-btn-test {
+    width: 100%;
+    padding: 10px;
+    border-style: dashed;
+    opacity: 0.7;
+}
+
+.echovault-btn-test:hover {
+    opacity: 1;
+}
+
+.echovault-confirm-delete {
+    border: 1px dashed var(--text-error);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.echovault-confirm-warning {
+    margin: 0 0 10px 0;
+    font-size: 0.85em;
+    color: var(--text-error);
+}
+
+.echovault-confirm-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.echovault-confirm-actions .echovault-btn {
+    flex: 1;
+}
+
+.echovault-btn-danger {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-btn-danger:hover {
+    opacity: 0.9;
+}
+
+/* Staging panel */
+.echovault-staging {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.echovault-staging-header {
+    font-size: 0.9em;
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.echovault-staging-bulk {
+    display: flex;
+    gap: 8px;
+}
+
+.echovault-staging-bulk .echovault-btn {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 0.8em;
+}
+
+.echovault-staging-btn-accept-all {
+    background: var(--color-green);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-staging-btn-reject-all {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border: none;
+}
+
+.echovault-staging-summary {
+    display: flex;
+    gap: 10px;
+    font-size: 0.78em;
+}
+
+.echovault-staging-count-accepted { color: var(--color-green); }
+.echovault-staging-count-rejected { color: var(--text-error); }
+.echovault-staging-count-pending { color: var(--text-faint); }
+
+.echovault-staging-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-staging-group {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-staging-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.82em;
+    cursor: pointer;
+}
+
+.echovault-staging-group-header:hover {
+    color: var(--text-normal);
+}
+
+.echovault-staging-group-name {
+    flex: 1;
+    text-align: left;
+    font-family: var(--font-monospace);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-staging-group-count {
+    background: var(--background-modifier-border);
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 0.85em;
+}
+
+.echovault-staging-file-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--background-secondary);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-staging-file-btn {
+    font-size: 0.75em;
+    padding: 3px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.echovault-staging-file-btn:hover {
+    color: var(--text-normal);
+}
+
+.echovault-staging-file-btn-accept:hover {
+    border-color: var(--color-green);
+    color: var(--color-green);
+}
+
+.echovault-staging-file-btn-reject:hover {
+    border-color: var(--color-red);
+    color: var(--color-red);
+}
+
+.echovault-staging-file-summary {
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    font-size: 0.75em;
+}
+
+.echovault-staging-cards {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-staging-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    border-left: 3px solid transparent;
+}
+
+.echovault-staging-card-accepted {
+    border-left-color: var(--color-green);
+}
+
+.echovault-staging-type-badge {
+    display: inline-block;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+    background: var(--background-modifier-border);
+    color: var(--text-muted);
+}
+
+.echovault-staging-type-mcq {
+    background: rgba(var(--color-blue-rgb), 0.15);
+    color: var(--color-blue);
+}
+
+.echovault-staging-type-tf {
+    background: rgba(var(--color-purple-rgb), 0.15);
+    color: var(--color-purple);
+}
+
+.echovault-staging-duplicate-warning {
+    font-size: 0.8em;
+    color: var(--text-warning);
+    background: var(--background-modifier-warning);
+    border-radius: 4px;
+    padding: 3px 8px;
+    margin-bottom: 6px;
+}
+
+.echovault-staging-card-rejected {
+    border-left-color: var(--text-error);
+    opacity: 0.5;
+}
+
+.echovault-staging-card-collapsed {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--background-modifier-border);
+    cursor: pointer;
+    font-size: 0.85em;
+}
+
+.echovault-staging-card-collapsed:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-staging-card-collapsed.echovault-staging-card-accepted {
+    border-left-color: var(--interactive-success);
+}
+
+.echovault-staging-card-collapsed.echovault-staging-card-rejected {
+    border-left-color: var(--text-error);
+    opacity: 0.5;
+}
+
+.echovault-staging-collapsed-badge {
+    font-size: 0.75em;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--background-modifier-border);
+    white-space: nowrap;
+}
+
+.echovault-staging-collapsed-q {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-muted);
+}
+
+.echovault-staging-q,
+.echovault-staging-a {
+    font-size: 0.85em;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.echovault-staging-a {
+    color: var(--text-muted);
+}
+
+.echovault-staging-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+    display: block;
+}
+
+.echovault-staging-mcq-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.echovault-staging-option-input {
+    flex: 1;
+    padding: 4px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+}
+
+.echovault-staging-type-selector {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+}
+
+.echovault-staging-type-btn {
+    flex: 1;
+    padding: 5px 8px;
+    font-size: 0.8em;
+    border-radius: 5px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+}
+
+.echovault-staging-type-btn-active {
     background: var(--interactive-accent);
     color: white;
     border-color: var(--interactive-accent);
 }
 
-.echovault-btn-easy {
+.echovault-staging-tf-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.echovault-staging-tf-btn {
     flex: 1;
+    padding: 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-secondary);
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.9em;
+}
+
+.echovault-staging-tf-btn-active {
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    border-color: var(--interactive-accent);
+}
+
+.echovault-staging-textarea {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.85em;
+    font-family: inherit;
+    resize: vertical;
+    margin-bottom: 6px;
+}
+
+.echovault-staging-card-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.echovault-staging-action {
+    padding: 3px 10px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.75em;
+    cursor: pointer;
+}
+
+.echovault-staging-action:hover {
+    color: var(--text-normal);
+    border-color: var(--text-muted);
+}
+
+.echovault-staging-action-active-accept {
     background: var(--color-green);
-    color: white;
+    color: var(--text-on-accent);
     border-color: var(--color-green);
 }
 
-/* Complete screen */
-.echovault-complete {
-    text-align: center;
-    padding: 24px 0;
+.echovault-staging-action-active-reject {
+    background: var(--text-error);
+    color: var(--text-on-accent);
+    border-color: var(--text-error);
 }
 
-.echovault-complete h2 {
+.echovault-staging-action-collapse {
+    margin-left: auto;
+    color: var(--text-faint);
+    font-size: 0.7em;
+}
+
+.echovault-staging-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+/* Review summary */
+.echovault-summary {
+    text-align: center;
+    padding: 16px 0;
+}
+
+.echovault-summary-emoji {
+    font-size: 2.5em;
     margin-bottom: 8px;
 }
 
-.echovault-complete p {
+.echovault-summary-title {
+    margin: 0 0 4px 0;
+}
+
+.echovault-summary-subtitle {
     color: var(--text-muted);
+    margin: 0 0 20px 0;
+    font-size: 0.9em;
+}
+
+.echovault-summary-stats {
+    display: flex;
+    gap: 12px;
     margin-bottom: 20px;
+}
+
+.echovault-summary-stat {
+    flex: 1;
+    padding: 12px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-summary-stat-value {
+    font-size: 1.4em;
+    font-weight: 700;
+}
+
+.echovault-summary-stat-label {
+    font-size: 0.75em;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+.echovault-summary-breakdown {
+    text-align: left;
+    margin-bottom: 20px;
+    padding: 14px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+}
+
+.echovault-summary-breakdown-title {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+}
+
+.echovault-summary-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-summary-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.echovault-summary-bar-label {
+    font-size: 0.8em;
+    width: 44px;
+    flex-shrink: 0;
+}
+
+.echovault-summary-bar-track {
+    flex: 1;
+    height: 8px;
+    background: var(--background-primary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.echovault-summary-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.echovault-summary-bar-again {
+    background: var(--text-error);
+}
+
+.echovault-summary-bar-hard {
+    background: var(--color-orange);
+}
+
+.echovault-summary-bar-good {
+    background: var(--interactive-accent);
+}
+
+.echovault-summary-bar-easy {
+    background: var(--color-green);
+}
+
+.echovault-summary-bar-count {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+/* Card browser */
+.echovault-browser-controls {
+    margin-bottom: 12px;
+}
+
+.echovault-browser-search {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+}
+
+.echovault-browser-search:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-browser-filters {
+    display: flex;
+    gap: 8px;
+}
+
+.echovault-browser-select {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 8px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 0.8em;
+    appearance: auto;
+    -webkit-appearance: auto;
+    cursor: pointer;
+}
+
+.echovault-browser-review-all {
+    margin-bottom: 12px;
+}
+
+.echovault-browser-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-browser-card {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-browser-card-header {
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.echovault-browser-card-header:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-browser-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.echovault-browser-card-top .echovault-card-type {
+    margin-bottom: 0;
+    font-size: 0.65em;
+}
+
+.echovault-browser-due-badge {
+    font-size: 0.65em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--text-error);
+    color: white;
+}
+
+.echovault-browser-card-question {
+    font-size: 0.9em;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.echovault-browser-card-expanded {
+    border-color: var(--interactive-accent);
+}
+
+.echovault-browser-card-detail {
+    padding: 0 12px 12px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-browser-card-answer {
+    padding: 10px 0;
+    font-size: 0.9em;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+.echovault-browser-card-meta {
+    padding: 8px 0;
+    font-size: 0.85em;
+}
+
+.echovault-browser-choices {
+    margin: 4px 0 0 0;
+    padding-left: 18px;
+}
+
+.echovault-browser-choices li {
+    margin-bottom: 2px;
+    color: var(--text-muted);
+}
+
+.echovault-browser-correct {
+    color: var(--color-green) !important;
+    font-weight: 600;
+}
+
+.echovault-browser-label {
+    display: block;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    margin-bottom: 2px;
+}
+
+.echovault-browser-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.echovault-browser-stat {
+    font-size: 0.85em;
+}
+
+.echovault-browser-history {
+    margin-top: 10px;
+    font-size: 0.85em;
+}
+
+.echovault-browser-history-list {
+    margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.echovault-browser-history-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--background-secondary);
+}
+
+.echovault-browser-history-date {
+    color: var(--text-muted);
+}
+
+.echovault-browser-history-rating {
+    font-weight: 600;
+    font-size: 0.85em;
+}
+
+.echovault-history-q0 { color: var(--text-error); }
+.echovault-history-q2 { color: var(--color-orange); }
+.echovault-history-q4 { color: var(--color-green); }
+.echovault-history-q5 { color: var(--interactive-accent); }
+
+.echovault-browser-delete {
+    width: 100%;
+    margin-top: 8px;
+    padding: 6px;
+    font-size: 0.8em;
+    color: var(--text-error);
+    border-color: var(--text-error);
+    background: none;
+}
+
+.echovault-browser-delete:hover {
+    background: var(--text-error);
+    color: white;
+}
+
+.echovault-browser-empty {
+    text-align: center;
+    padding: 24px 0;
+    color: var(--text-muted);
+    font-size: 0.9em;
+}
+
+/* Source filter + view toggle row */
+.echovault-browser-select-source {
+    flex: 1;
+    min-width: 0;
+}
+
+.echovault-browser-view-toggle {
+    display: flex;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.echovault-browser-view-btn {
+    padding: 4px 10px;
+    background: var(--background-secondary);
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.95em;
+}
+
+.echovault-browser-view-btn-active {
+    background: var(--interactive-accent);
+    color: white;
+}
+
+/* Grouped view */
+.echovault-browser-group {
+    margin-bottom: 6px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.echovault-browser-group-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 8px 10px;
+    background: var(--background-secondary);
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.85em;
+}
+
+.echovault-browser-group-name {
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.echovault-browser-group-path {
+    color: var(--text-faint);
+    font-size: 0.8em;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-browser-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.echovault-browser-tag {
+    font-size: 0.75em;
+    padding: 2px 7px;
+    border-radius: 10px;
+    background: var(--interactive-accent);
+    color: white;
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.echovault-browser-tag:hover {
+    opacity: 1;
+}
+
+.echovault-browser-group-count {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    background: var(--background-modifier-border);
+    padding: 1px 6px;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+/* Git log */
+.echovault-gitlog-status {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    padding: 24px 0;
+}
+
+.echovault-gitlog-error {
+    color: var(--text-error);
+}
+
+.echovault-gitlog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.echovault-gitlog-entry {
+    padding: 10px 12px;
+    border-radius: 6px;
+    border-left: 3px solid var(--background-modifier-border);
+}
+
+.echovault-gitlog-entry:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-gitlog-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.echovault-gitlog-hash {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--interactive-accent);
+    font-weight: 600;
+}
+
+.echovault-gitlog-date {
+    font-size: 0.75em;
+    color: var(--text-faint);
+}
+
+.echovault-gitlog-message {
+    font-size: 0.9em;
+    line-height: 1.4;
+    margin-bottom: 4px;
+}
+
+.echovault-gitlog-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.echovault-gitlog-files {
+    font-size: 0.75em;
+    color: var(--text-faint);
+}
+
+.echovault-gitlog-entry {
+    cursor: pointer;
+}
+
+.echovault-gitlog-entry-expanded {
+    background: var(--background-secondary);
+    border-left-color: var(--interactive-accent);
+}
+
+.echovault-gitlog-filelist {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: var(--background-primary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 4px;
+}
+
+.echovault-gitlog-file {
+    font-family: var(--font-monospace);
+    font-size: 0.8em;
+    color: var(--text-muted);
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-gitlog-cards-badge {
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: white;
+}
+
+.echovault-gitlog-empty {
+    text-align: center;
+    padding: 24px 16px;
+}
+
+.echovault-gitlog-empty-title {
+    font-size: 1.05em;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.echovault-gitlog-empty-desc {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    line-height: 1.5;
+    margin: 0 0 16px 0;
+}
+
+/* Create card form */
+.echovault-create-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.echovault-create-type-picker {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.echovault-create-type-btn {
+    flex: 1;
+    padding: 8px 4px;
+    font-size: 0.8em;
+    text-align: center;
+}
+
+.echovault-create-type-active {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-create-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.echovault-create-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+    background: var(--background-secondary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.echovault-create-input:focus {
+    outline: none;
+    border-color: var(--interactive-accent);
+}
+
+.echovault-create-textarea {
+    resize: vertical;
+    min-height: 60px;
+    line-height: 1.5;
+}
+
+.echovault-create-choice-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.echovault-create-choice-row input[type="radio"] {
+    flex-shrink: 0;
+}
+
+.echovault-create-hint {
+    font-size: 0.75em;
+    color: var(--text-faint);
+    margin: 0;
+}
+
+.echovault-create-tf-toggle {
+    display: flex;
+    gap: 6px;
+}
+
+.echovault-create-tf-btn {
+    flex: 1;
+    padding: 10px;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.echovault-create-tf-active {
+    background: var(--interactive-accent);
+    color: white;
+    border-color: var(--interactive-accent);
+}
+
+/* Note picker */
+.echovault-note-picker {
+    position: relative;
+}
+
+.echovault-note-picker-selected {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--background-secondary);
+    border: 1px solid var(--interactive-accent);
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.echovault-note-picker-path {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-note-picker-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.echovault-note-picker-clear:hover {
+    color: var(--text-error);
+}
+
+.echovault-note-picker-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--background-primary);
+    border: 2px solid var(--interactive-accent);
+    border-radius: 6px;
+    margin-top: 4px;
+    z-index: 10;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.echovault-note-picker-item {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    text-align: left;
+    font-size: 0.85em;
+    background: none;
+    border: none;
+    color: var(--text-normal);
+    cursor: pointer;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.echovault-note-picker-item:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-note-picker-section {
+    padding: 6px 12px 4px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-faint);
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-note-picker-section:first-child {
+    border-top: none;
+}
+
+.echovault-note-picker-active {
+    color: var(--interactive-accent) !important;
+}
+
+.echovault-note-picker-badge {
+    margin-left: auto;
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: var(--interactive-accent);
+    color: white;
+    flex-shrink: 0;
+}
+
+.echovault-note-picker-more {
+    padding: 8px 12px;
+    font-size: 0.8em;
+    color: var(--text-faint);
+    text-align: center;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-note-picker-empty {
+    padding: 12px;
+    text-align: center;
+    font-size: 0.85em;
+    color: var(--text-faint);
+}
+
+/* Tutorial */
+.echovault-tutorial {
+    padding: 8px 0;
+    text-align: center;
+}
+
+.echovault-tutorial-progress {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+
+.echovault-tutorial-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--background-modifier-border);
+    transition: background 0.2s, transform 0.2s;
+}
+
+.echovault-tutorial-dot-active {
+    background: var(--interactive-accent);
+    transform: scale(1.3);
+}
+
+.echovault-tutorial-dot-done {
+    background: var(--interactive-accent);
+    opacity: 0.5;
+}
+
+.echovault-tutorial-card {
+    padding: 20px 16px;
+    margin-bottom: 24px;
+    animation: echovault-panel-in 0.25s ease-out;
+}
+
+.echovault-tutorial-icon {
+    color: var(--interactive-accent);
+    margin-bottom: 16px;
+}
+
+.echovault-tutorial-title {
+    margin: 0 0 10px 0;
+    font-size: 1.15em;
+}
+
+.echovault-tutorial-desc {
+    color: var(--text-muted);
+    font-size: 0.9em;
+    line-height: 1.6;
+    margin: 0;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.echovault-tutorial-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.echovault-tutorial-back,
+.echovault-tutorial-next {
+    flex: 1;
+    min-width: 100px;
+}
+
+.echovault-tutorial-skip {
+    background: none;
+    border: none;
+    color: var(--text-faint);
+    font-size: 0.8em;
+    cursor: pointer;
+    padding: 4px 8px;
+}
+
+.echovault-tutorial-skip:hover {
+    color: var(--text-muted);
+    text-decoration: underline;
+}
+
+/* About modal */
+.echovault-about-modal h2 {
+    margin-top: 0;
+    margin-bottom: 4px;
+}
+
+.echovault-about-version {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+.echovault-about-modal h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    font-size: 1em;
+}
+
+.echovault-about-modal ul {
+    padding-left: 20px;
+    margin: 0;
+}
+
+.echovault-about-modal li {
+    margin-bottom: 4px;
+    color: var(--text-muted);
+}
+
+.echovault-about-modal p {
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.echovault-about-repo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-top: 16px;
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    transition: border-color 0.15s;
+}
+
+.echovault-about-repo:hover {
+    border-color: var(--interactive-accent);
+    color: var(--text-normal);
+}
+
+.echovault-about-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--background-modifier-border);
+}
+
+.echovault-about-author {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--background-secondary);
+    border-radius: 8px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.echovault-about-author:hover {
+    background: var(--background-modifier-hover);
+}
+
+.echovault-about-github-icon {
+    color: var(--text-muted);
+    line-height: 0;
+    flex-shrink: 0;
+}
+
+.echovault-about-author-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.echovault-about-author-name {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.echovault-about-author-role {
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.echovault-about-tagline {
+    text-align: center;
+    font-size: 0.8em;
+    color: var(--text-faint);
+}
+
+/* Import Queue panel */
+.echovault-import-queue {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.echovault-import-queue-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.echovault-import-queue-count {
+    font-weight: 600;
+    color: var(--text-normal);
+}
+
+.echovault-import-queue-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 340px;
+    overflow-y: auto;
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 6px;
+}
+
+.echovault-import-queue-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.echovault-import-queue-item:last-child {
+    border-bottom: none;
+}
+
+.echovault-import-queue-item:hover {
+    background: var(--background-secondary);
+}
+
+.echovault-import-queue-item-disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.echovault-import-queue-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.echovault-import-queue-name {
+    font-size: 0.9em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.echovault-import-queue-folder {
+    font-size: 0.75em;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.echovault-import-queue-search {
+    width: 100%;
+    padding: 6px 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--background-modifier-border);
+    background: var(--background-primary);
+    color: var(--text-normal);
+    font-size: 0.9em;
+    box-sizing: border-box;
+}
+
+.echovault-import-queue-bulk {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.echovault-import-queue-bulk-btn {
+    flex: 1;
+    font-size: 0.8em;
+    padding: 5px 8px;
+}
+
+.echovault-import-queue-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.echovault-import-queue-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+}
+
+.echovault-import-queue-tag {
+    font-size: 0.7em;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--interactive-accent);
+    color: white;
+    opacity: 0.8;
+    cursor: pointer;
+}
+
+.echovault-import-queue-tag:hover {
+    opacity: 1;
+}
+
+.echovault-import-queue-empty {
+    padding: 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9em;
+    list-style: none;
+}
+
+.echovault-import-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.echovault-import-progress-bar {
+    height: 6px;
+    background: var(--background-modifier-border);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.echovault-import-progress-fill {
+    height: 100%;
+    background: var(--interactive-accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.echovault-import-progress-label {
+    font-size: 0.8em;
+    color: var(--text-muted);
+    text-align: right;
+}
+
+.echovault-import-queue-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Tooltip wrapper for disabled buttons (title on disabled buttons is suppressed in Electron) */
+.echovault-btn-tooltip-wrap {
+    display: contents;
+}
+
+/* Queue badge on dashboard button */
+.echovault-queue-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--interactive-accent);
+    color: var(--text-on-accent);
+    font-size: 0.75em;
+    font-weight: 700;
+    margin-left: 4px;
 }

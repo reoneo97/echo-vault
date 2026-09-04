@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EchoVault Feedback Logs</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; max-width: 900px; margin: 0 auto; }
+    h1 { margin-bottom: 8px; color: #fff; font-size: 1.4em; }
+    .subtitle { color: #888; margin-bottom: 24px; font-size: 0.85em; }
+    .entry { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; margin-bottom: 12px; }
+    .entry summary { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; list-style: none; }
+    .entry summary::-webkit-details-marker { display: none; }
+    .entry[open] summary { border-bottom: 1px solid #0f3460; }
+    .entry-num { color: #e94560; font-weight: 700; font-size: 0.85em; min-width: 32px; }
+    .entry-time { color: #666; font-size: 0.75em; }
+    .entry-body { padding: 16px; }
+    .stat { font-size: 0.8em; padding: 2px 8px; border-radius: 4px; }
+    .stat-accepted { background: #1a3a2a; color: #53d8a8; }
+    .stat-rejected { background: #3a1a1a; color: #e94560; }
+    .stat-edited { background: #3a3a1a; color: #d8c853; }
+    .card { border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+    .card-accepted { background: #0f3460; border-left: 3px solid #53d8a8; }
+    .card-rejected { background: #1a1a2e; border-left: 3px solid #e94560; opacity: 0.6; }
+    .card-edited { background: #0f3460; border-left: 3px solid #d8c853; }
+    .card-decision { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .card-q { margin-bottom: 6px; line-height: 1.5; }
+    .card-a { color: #53d8a8; line-height: 1.5; }
+    .card-source { font-size: 0.75em; color: #666; margin-top: 4px; }
+    .card-edit-note { font-size: 0.78em; color: #d8c853; margin-top: 6px; font-style: italic; }
+    .empty { color: #666; font-style: italic; }
+</style>
+</head>
+<body>
+    <h1>EchoVault Feedback Logs</h1>
+    <p class="subtitle">Showing {{ entries | length }} most recent feedback submissions (newest first)</p>
+
+    {% if entries %}
+        {% for entry in entries %}
+        <details class="entry" {% if loop.first %}open{% endif %}>
+            <summary>
+                <span class="entry-num">#{{ entries | length - loop.index0 }}</span>
+                <span class="stat stat-accepted">{{ entry.accepted }} accepted</span>
+                <span class="stat stat-rejected">{{ entry.rejected }} rejected</span>
+                {% if entry.edited %}<span class="stat stat-edited">{{ entry.edited }} edited</span>{% endif %}
+                <span class="entry-time">{{ entry.timestamp }}</span>
+            </summary>
+            <div class="entry-body">
+                {% for card in entry.entries %}
+                <div class="card card-{{ card.decision }}">
+                    <div class="card-decision" style="color: {{ '#53d8a8' if card.decision == 'accepted' else '#e94560' if card.decision == 'rejected' else '#d8c853' }}">
+                        {{ card.decision }}
+                    </div>
+                    <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
+                    <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                    {% if card.decision == 'edited' %}
+                        {% if card.edited_question %}
+                        <div class="card-edit-note">Edited Q: {{ card.edited_question | e }}</div>
+                        {% endif %}
+                        {% if card.edited_answer %}
+                        <div class="card-edit-note">Edited A: {{ card.edited_answer | e }}</div>
+                        {% endif %}
+                    {% endif %}
+                    <div class="card-source">{{ card.source_note | e }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </details>
+        {% endfor %}
+    {% else %}
+        <p class="empty">No feedback entries found.</p>
+    {% endif %}
+</body>
+</html>

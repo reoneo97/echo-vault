@@ -1,7 +1,7 @@
 import { Modal, App } from "obsidian";
 import { Flashcard } from "./types";
-import { sm2 } from "./sm2";
-import { FlashcardStore } from "./store";
+import { sm2 } from "./core/sm2";
+import { FlashcardStore } from "./core/store";
 import { nowISO } from "./utils";
 
 const RATINGS: { label: string; quality: number }[] = [

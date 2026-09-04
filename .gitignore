@@ -1,3 +1,15 @@
 vault/echo-vault/.obsidian
+vault/echo-vault/
 .claude
 **/node_modules/**
+*.egg-info/
+CLAUDE.md
+archive/
+.vscode/
+**/*.env
+plugin/main.js
+backend/logs/
+# Derived from backend/logs/ (real personal note content) -- regenerate via
+# evals/build_historical_fixtures.py, don't commit. fixtures/standard + hard
+# are curated and DO stay committed.
+evals/fixtures/historical/

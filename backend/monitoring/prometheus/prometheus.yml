@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s      # how often Prometheus polls each target
+  evaluation_interval: 15s  # how often alerting rules are evaluated
+
+scrape_configs:
+  - job_name: "echovault-backend"
+    static_configs:
+      # host.docker.internal resolves to the host machine from inside Docker
+      # so Prometheus (in Docker) can reach uvicorn running on your laptop
+      - targets: ["host.docker.internal:8000"]
+    metrics_path: "/metrics"

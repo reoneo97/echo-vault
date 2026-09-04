@@ -1,84 +1,144 @@
-# EchoVault
+<p align="center">
+  <img src="assets/icon.svg" alt="EchoVault" width="96" height="96" />
+</p>
 
-AI-powered flashcard generation for Obsidian using git diffs and spaced repetition.
+<h1 align="center">EchoVault</h1>
 
-Write notes, commit changes, and EchoVault automatically generates flashcards from what's new — then schedules reviews using the SM-2 algorithm.
+<p align="center">
+  AI-powered flashcard generation for Obsidian using git diffs and spaced repetition.
+</p>
+
+<p align="center">
+  Write notes, commit changes, and EchoVault automatically generates flashcards from what's new — then schedules reviews using the SM-2 algorithm.
+</p>
+
+---
 
 ## How It Works
 
 1. Write or edit notes in Obsidian
-2. Run **Commit & Generate Flashcards** — the plugin commits your vault and extracts the diff
-3. New content is sent to a Python backend which calls an LLM (via OpenRouter) to create Q&A flashcards
-4. Cards are stored locally in your vault as JSON
+2. Run **Commit & Generate Flashcards** — the plugin commits your vault and extracts per-file diffs
+3. Each file's new content is sent to a Python backend which calls an LLM in parallel (via OpenRouter) to create flashcards
+4. Cards are stored locally in your vault as JSON, each attributed to its source note
 5. Run **Review Flashcards** to study due cards with spaced repetition scheduling
+
+## Card Types
+
+- **Q&A** — classic question and answer
+- **Multiple Choice** — pick from 4 options with instant correct/incorrect feedback
+- **True / False** — binary choice with color-coded feedback
 
 ## Architecture
 
 ```
-Obsidian Plugin (TypeScript)          Python Backend (FastAPI)
-┌──────────────────────────┐          ┌─────────────────────┐
-│  Git ops (commit, diff)  │          │                     │
-│  Flashcard storage       │── diff ─▶│  OpenRouter LLM API │
-│  SM-2 scheduling         │◀─ cards ─│                     │
-│  Review modal UI         │          └─────────────────────┘
-└──────────────────────────┘
+Obsidian Plugin (TypeScript + React)     Python Backend (FastAPI + Docker)
+┌──────────────────────────────┐         ┌──────────────────────────────┐
+│  Git ops (commit, diff)      │         │  OpenRouter LLM API          │
+│  Flashcard storage           │── diff ─▶  Logfire tracing             │
+│  SM-2 scheduling             │◀─ cards ─│                              │
+│  React sidebar UI            │         └──────────────────────────────┘
+└──────────────────────────────┘
 ```
+
+(Prometheus + Grafana were removed for now — a single-user tool run manually
+doesn't get much from live dashboards; MLflow covers the eval/backtest side.)
 
 - **Plugin** handles everything local: UI, git, storage, review scheduling
-- **Backend** handles LLM calls only: receives diff text, returns Q&A pairs
+- **Backend** handles LLM calls, metrics, and tracing — runs in Docker
 - Reviews work fully offline — the backend is only needed for generating new cards
 
-## Setup
+---
 
-### Backend
+## Quick Start
+
+### 1. Configure the backend
 
 ```bash
-cd backend
-cp .env.example .env
-# Add your OpenRouter API key to .env
-
-uv venv && source .venv/bin/activate
-uv pip install -e .
-uvicorn app.main:app --reload
+cp backend/.env.example backend/.env
 ```
 
-The backend runs at `http://localhost:8000`. Verify with:
+Edit `backend/.env` and add your keys:
 
+```
+OPENROUTER_API_KEY=sk-or-...
+OPENROUTER_MODEL=qwen/qwen3.5-9b
+LOGFIRE_TOKEN=pylf_...        # optional — omit to disable tracing
+```
+
+### 2. Start everything
+
+```bash
+make up
+```
+
+This builds and starts the backend + MLflow in Docker:
+
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:8000 |
+| MLflow | http://localhost:5001 |
+
+Verify the backend is healthy:
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-### Plugin
+### 3. Install the plugin
+
+Build and copy to your vault:
 
 ```bash
-cd plugin
-npm install
-npm run build
+make install PLUGIN_DEST="/path/to/your/vault/.obsidian/plugins/echo-vault"
 ```
 
-Then copy these files into your vault at `.obsidian/plugins/echo-vault/`:
+Enable the plugin in Obsidian → Settings → Community Plugins.
 
-- `main.js`
-- `manifest.json`
-- `styles.css`
+---
 
-Enable the plugin in Obsidian settings.
+## Daily Workflow
+
+```bash
+make up        # start backend + monitoring (run once; restarts automatically on reboot isn't automatic — re-run after restart)
+make down      # stop everything
+make logs      # tail backend logs
+make restart   # rebuild + restart backend after code changes
+```
+
+---
+
+## Development
+
+```bash
+# Plugin — watch mode with auto-install to test vault
+make start
+
+# Tests
+make test          # plugin + backend
+make test-plugin   # vitest
+make test-backend  # pytest
+```
+
+For backend changes, rebuild and restart the container:
+```bash
+make restart
+```
+
+---
 
 ## Usage
 
 | Command | What it does |
 |---|---|
-| **Commit & Generate Flashcards** | Commits vault changes via git, extracts the diff, sends new content to the backend, and stores the generated flashcards |
-| **Review Flashcards** | Opens a modal with due cards — flip to reveal the answer, then rate (Again / Hard / Good / Easy) |
+| **Commit & Generate Flashcards** | Commits vault changes, extracts the diff, generates flashcards via LLM |
+| **Regenerate from Active Note** | Force-generates cards from the currently open note |
+| **Import Existing Notes** | Gradually import notes from an existing vault (10 at a time) |
+| **Review Flashcards** | Opens the sidebar with due cards — answer then rate (Again / Hard / Good / Easy) |
+| **Browse All Cards** | Search, filter, and manage all flashcards |
 
-A ribbon icon (brain) and status bar item showing due card count are also available.
+Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Again / Hard / Good / Easy).
 
-### Settings
-
-- **Backend URL** — where the Python backend is running (default: `http://localhost:8000`)
-- **Flashcard folder** — vault folder for storing flashcard data (default: `EchoVault`)
-- **Max cards per generation** — limit on flashcards created per commit (default: 10)
+---
 
 ## Configuration
 
@@ -86,36 +146,31 @@ A ribbon icon (brain) and status bar item showing due card count are also availa
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | — | Your OpenRouter API key (required) |
-| `OPENROUTER_MODEL` | `anthropic/claude-sonnet-4` | LLM model to use for generation |
+| `OPENROUTER_API_KEY` | — | Required. Get one at openrouter.ai |
+| `OPENROUTER_MODEL` | `qwen/qwen3.5-9b` | LLM model for card generation |
+| `LOGFIRE_TOKEN` | — | Optional. Enables distributed tracing via Logfire |
+| `ENVIRONMENT` | `development` | Passed to Logfire as the service environment |
+
+### Plugin settings
+
+| Setting | Default | Description |
+|---|---|---|
+| Backend URL | `http://localhost:8000` | Where the backend is running |
+| Flashcard folder | `EchoVault` | Vault folder for storing card data |
+| Max cards per generation | `10` | Global cap on cards per commit |
+
+---
 
 ## Project Structure
 
 ```
 echo-vault/
+├── docker-compose.yml     # starts backend + MLflow
+├── Makefile               # make up / down / logs / install / test
+├── plugin/                # Obsidian plugin (TypeScript + React)
 ├── backend/
-│   ├── pyproject.toml
-│   ├── .env.example
-│   └── app/
-│       ├── main.py          # FastAPI app + CORS
-│       ├── routes.py        # /health, /generate-flashcards
-│       ├── openrouter.py    # LLM API client
-│       ├── schemas.py       # Pydantic models
-│       └── config.py        # Settings from .env
-│
-└── plugin/
-    ├── manifest.json
-    ├── package.json
-    ├── styles.css
-    └── src/
-        ├── main.ts          # Plugin entry point
-        ├── types.ts         # Interfaces and defaults
-        ├── settings.ts      # Settings tab UI
-        ├── sm2.ts           # SM-2 algorithm
-        ├── store.ts         # Flashcard JSON persistence
-        ├── git.ts           # Git operations
-        ├── api-client.ts    # Backend HTTP client
-        ├── generate.ts      # Commit → diff → generate orchestration
-        ├── review-modal.ts  # Review UI modal
-        └── utils.ts         # ID generation, date helpers
+│   ├── Dockerfile
+│   ├── app/               # FastAPI application
+│   └── monitoring/        # Prometheus + Grafana config (unused for now, kept for later)
+└── vault/                 # Test vault for development
 ```

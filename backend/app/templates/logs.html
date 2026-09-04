@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EchoVault Request Logs</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #e0e0e0; padding: 24px; max-width: 900px; margin: 0 auto; }
+    h1 { margin-bottom: 8px; color: #fff; font-size: 1.4em; }
+    .subtitle { color: #888; margin-bottom: 24px; font-size: 0.85em; }
+    .entry { background: #16213e; border: 1px solid #0f3460; border-radius: 8px; margin-bottom: 12px; }
+    .entry summary { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; list-style: none; }
+    .entry summary::-webkit-details-marker { display: none; }
+    .entry[open] summary { border-bottom: 1px solid #0f3460; }
+    .entry-num { color: #e94560; font-weight: 700; font-size: 0.85em; min-width: 32px; }
+    .entry-source { color: #fff; font-weight: 600; flex: 1; }
+    .entry-meta { color: #53d8a8; font-size: 0.8em; }
+    .entry-time { color: #666; font-size: 0.75em; }
+    .entry-body { padding: 16px; }
+    .section { margin-bottom: 16px; }
+    .section:last-child { margin-bottom: 0; }
+    .section h3 { color: #a8a8d8; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+    pre.diff { background: #0a0a1a; border: 1px solid #0f3460; border-radius: 6px; padding: 12px; font-size: 0.8em; line-height: 1.6; overflow-x: auto; white-space: pre-wrap; word-break: break-word; color: #b0b0d0; }
+    .card { background: #0f3460; border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .card-num { font-size: 0.7em; color: #e94560; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card-type { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; padding: 1px 6px; border-radius: 3px; }
+    .card-type-standard { background: #2a2a4a; color: #a8a8d8; }
+    .card-type-multiple_choice { background: #1a3a5c; color: #53b8f8; }
+    .card-type-true_false { background: #2a1a4a; color: #c8a8f8; }
+    .card-q { margin-bottom: 6px; line-height: 1.5; }
+    .card-a { color: #53d8a8; line-height: 1.5; margin-bottom: 4px; }
+    .card-options { margin-top: 6px; }
+    .card-option { font-size: 0.85em; padding: 2px 0; color: #b0b0d0; }
+    .card-option.correct { color: #53d8a8; font-weight: 600; }
+    .empty { color: #666; font-style: italic; }
+    .file-block { border: 1px solid #0f3460; border-radius: 6px; margin-bottom: 12px; overflow: hidden; }
+    .file-header { background: #0f3460; padding: 8px 14px; font-size: 0.85em; font-weight: 600; color: #fff; display: flex; justify-content: space-between; }
+    .file-header .file-meta { color: #53d8a8; font-weight: 400; font-size: 0.85em; }
+    .file-body { padding: 12px; }
+</style>
+</head>
+<body>
+    <h1>EchoVault Request Logs</h1>
+    <p class="subtitle">Showing {{ entries | length }} most recent requests (newest first)</p>
+
+    {% if entries %}
+        {% for entry in entries %}
+        <details class="entry" {% if loop.first %}open{% endif %}>
+            <summary>
+                <span class="entry-num">#{{ entries | length - loop.index0 }}</span>
+                {% if entry.batch %}
+                    <span class="entry-source">{{ entry.files | length }} file{{ 's' if entry.files | length != 1 }}</span>
+                    <span class="entry-meta">{{ entry.total_cards }} cards &middot; {{ entry.elapsed_seconds }}s &middot; {{ entry.model | e }}</span>
+                {% else %}
+                    <span class="entry-source">{{ entry.source_note | e }}</span>
+                    <span class="entry-meta">{{ entry.cards | length }} cards &middot; {{ entry.elapsed_seconds }}s &middot; {{ entry.model | e }}</span>
+                {% endif %}
+                <span class="entry-time">{{ entry.timestamp }}</span>
+            </summary>
+            <div class="entry-body">
+                {% if entry.batch %}
+                    {% for file in entry.files %}
+                    <div class="file-block">
+                        <div class="file-header">
+                            <span>{{ file.source_note | e }}</span>
+                            <span class="file-meta">{{ file.cards | length }} cards &middot; budget {{ file.budget }}</span>
+                        </div>
+                        <div class="file-body">
+                            <div class="section">
+                                <h3>Diff</h3>
+                                <pre class="diff">{{ file.diff_content | e }}</pre>
+                            </div>
+                            <div class="section">
+                                <h3>Cards</h3>
+                                {% if file.cards %}
+                                    {% for card in file.cards %}
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <span class="card-num">Card {{ loop.index }}</span>
+                                            <span class="card-type card-type-{{ card.type | default('standard') }}">{{ card.type | default('standard') | replace('_', ' ') }}</span>
+                                        </div>
+                                        <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
+                                        <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                                        {% if card.options %}
+                                        <div class="card-options">
+                                            {% for opt in card.options %}
+                                            <div class="card-option {% if opt == card.correct_answer %}correct{% endif %}">
+                                                {{ loop.index }}. {{ opt | e }} {% if opt == card.correct_answer %}✓{% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="empty">No cards generated</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="section">
+                        <h3>Diff</h3>
+                        <pre class="diff">{{ entry.diff_content | e }}</pre>
+                    </div>
+                    <div class="section">
+                        <h3>Generated Cards ({{ entry.cards | length }})</h3>
+                        {% if entry.cards %}
+                            {% for card in entry.cards %}
+                            <div class="card">
+                                <div class="card-num">Card {{ loop.index }}</div>
+                                <div class="card-q"><strong>Q:</strong> {{ card.question | e }}</div>
+                                <div class="card-a"><strong>A:</strong> {{ card.answer | e }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="empty">No cards generated</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        </details>
+        {% endfor %}
+    {% else %}
+        <p class="empty">No log entries found.</p>
+    {% endif %}
+</body>
+</html>

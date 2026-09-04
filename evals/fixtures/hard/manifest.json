@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "created": "2026-06-04",
+  "description": "Hard fixture set — notes that are intentionally difficult for the LLM to generate good flashcards from. Used to test robustness and identify failure modes.",
+  "difficulty_criteria": [
+    "Very sparse content (under 150 words)",
+    "Heavy jargon with no definitions",
+    "No clear structure — stream of consciousness",
+    "Ambiguous claims that could be true or false",
+    "Mixed languages or notation-heavy (lots of LaTeX/math)"
+  ],
+  "notes": []
+}
