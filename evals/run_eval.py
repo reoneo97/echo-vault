@@ -68,6 +68,29 @@ def call_backend(notes: list[dict], backend_url: str) -> tuple[dict, float]:
     return response.json(), elapsed
 
 
+def is_malformed(card: dict) -> str | None:
+    """Return a short reason string if the card fails basic structural
+    validity, else None. Mechanical only -- no judgement of quality, just
+    "is this card even usable". Catches e.g. the correct_answer: null class
+    of bug found in production logs."""
+    if not card.get("question", "").strip():
+        return "empty_question"
+    if not card.get("answer", "").strip():
+        return "empty_answer"
+    if card.get("type") == "multiple_choice":
+        options = card.get("options") or []
+        correct = card.get("correct_answer")
+        if len(options) < 2:
+            return "too_few_options"
+        if len(set(options)) != len(options):
+            return "duplicate_options"
+        if not correct:
+            return "null_correct_answer"
+        if correct not in options:
+            return "correct_answer_not_in_options"
+    return None
+
+
 def compute_metrics(response: dict, elapsed: float) -> dict:
     file_results = response.get("file_results", [])
     all_cards = []
@@ -84,13 +107,18 @@ def compute_metrics(response: dict, elapsed: float) -> dict:
 
     type_counts = {"standard": 0, "multiple_choice": 0, "true_false": 0}
     question_lengths, answer_lengths = [], []
+    malformed_reasons: dict[str, int] = {}
 
     for card in all_cards:
         type_counts[card.get("type", "standard")] = type_counts.get(card.get("type", "standard"), 0) + 1
         question_lengths.append(len(card.get("question", "").split()))
         answer_lengths.append(len(card.get("answer", "").split()))
+        if reason := is_malformed(card):
+            malformed_reasons[reason] = malformed_reasons.get(reason, 0) + 1
 
-    return {
+    malformed_count = sum(malformed_reasons.values())
+
+    metrics = {
         "total_cards": total,
         "cards_per_file": round(total / max(len(file_results), 1), 2),
         "failed_files": failed_files,
@@ -100,7 +128,12 @@ def compute_metrics(response: dict, elapsed: float) -> dict:
         "avg_question_words": round(sum(question_lengths) / total, 1),
         "avg_answer_words": round(sum(answer_lengths) / total, 1),
         "generation_time_seconds": round(elapsed, 2),
+        "malformed_card_count": malformed_count,
+        "malformed_card_rate": round(malformed_count / total, 3),
     }
+    for reason, count in malformed_reasons.items():
+        metrics[f"malformed_{reason}"] = count
+    return metrics
 
 
 def main():

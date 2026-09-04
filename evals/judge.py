@@ -15,9 +15,16 @@ Scores logged to MLflow (experiment: echovault-card-quality):
     avg_question_clarity    — is the question specific and unambiguous? (1-5)
     avg_answer_quality      — is the answer faithful and clear? (1-5)
     avg_distractor_quality  — are MCQ distractors plausible? (1-5, MCQ only)
+    avg_groundedness        — is the answer actually supported by the source note? (1-5)
     avg_overall             — mean of above scores
     judged_cards            — how many cards were scored
     judge_errors            — how many cards failed to score
+    cognitive_level_counts  — {recall, application, mechanism, connection} card counts
+    cognitive_level_ratios  — same, as a fraction of judged cards
+
+`cognitive_level` is a classification, not a 1-5 score — used to see the SHIFT
+away from recall-only extraction (see docs/echo-vault-redesign.md §5), not just
+a quality number. It's excluded from `avg_overall`.
 """
 
 import argparse
@@ -63,8 +70,19 @@ Score each criterion from 1 to 5:
   1 = obviously wrong or partially correct, 3 = acceptable, 5 = excellent distractors
   Set to null if not MCQ.
 
+- groundedness: Is the answer/explanation actually supported by the source note excerpt above —
+  not something the model added from general knowledge that isn't stated or implied in the source?
+  1 = answer is not supported by the source (possibly hallucinated), 3 = mostly supported with minor
+  unsupported detail, 5 = fully and precisely grounded in the source text
+
+Also classify the card's cognitive level — what kind of thinking it actually tests:
+- "recall": asks to state a fact/definition verbatim or near-verbatim from the source
+- "application": asks how a concept would be used/chosen in a scenario, not just what it is
+- "mechanism": asks WHY or HOW something works, not just that it exists
+- "connection": relates two or more concepts/notes to each other
+
 Respond with this JSON and nothing else:
-{{"question_clarity": <1-5>, "answer_quality": <1-5>, "distractor_quality": <1-5 or null>, "reasoning": "<one sentence>"}}"""
+{{"question_clarity": <1-5>, "answer_quality": <1-5>, "distractor_quality": <1-5 or null>, "groundedness": <1-5>, "cognitive_level": "<recall|application|mechanism|connection>", "reasoning": "<one sentence>"}}"""
 
 
 def format_choices(card: dict) -> str:
@@ -136,7 +154,8 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
         else:
             sources[fr["source_note"]] = ""
 
-    clarity_scores, answer_scores, distractor_scores = [], [], []
+    clarity_scores, answer_scores, distractor_scores, groundedness_scores = [], [], [], []
+    cognitive_levels = {"recall": 0, "application": 0, "mechanism": 0, "connection": 0}
     per_card = []
     errors = 0
 
@@ -158,6 +177,11 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
             answer_scores.append(scores.get("answer_quality", 0))
             if scores.get("distractor_quality") is not None:
                 distractor_scores.append(scores["distractor_quality"])
+            if scores.get("groundedness") is not None:
+                groundedness_scores.append(scores["groundedness"])
+            level = scores.get("cognitive_level")
+            if level in cognitive_levels:
+                cognitive_levels[level] += 1
 
             per_card.append({
                 "source_note": fr["source_note"],
@@ -166,15 +190,20 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
                 "scores": scores,
             })
 
-    all_scores = clarity_scores + answer_scores + distractor_scores
+    # cognitive_level is a classification, not a 1-5 score -- kept out of avg_overall
+    all_scores = clarity_scores + answer_scores + distractor_scores + groundedness_scores
+    judged = len(per_card)
     metrics = {
         "avg_question_clarity": round(sum(clarity_scores) / len(clarity_scores), 2) if clarity_scores else 0,
         "avg_answer_quality": round(sum(answer_scores) / len(answer_scores), 2) if answer_scores else 0,
         "avg_distractor_quality": round(sum(distractor_scores) / len(distractor_scores), 2) if distractor_scores else 0,
+        "avg_groundedness": round(sum(groundedness_scores) / len(groundedness_scores), 2) if groundedness_scores else 0,
         "avg_overall": round(sum(all_scores) / len(all_scores), 2) if all_scores else 0,
-        "judged_cards": len(per_card),
+        "judged_cards": judged,
         "judge_errors": errors,
     }
+    for level, count in cognitive_levels.items():
+        metrics[f"cognitive_ratio_{level}"] = round(count / judged, 3) if judged else 0
     return metrics, per_card
 
 

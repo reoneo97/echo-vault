@@ -2,7 +2,7 @@ PLUGIN_SRC = ./plugin
 PLUGIN_DEST = /Users/reo/Documents/Reo/data-science/data-science-notes/.obsidian/plugins/echo-vault
 BACKEND_SRC = ./backend
 
-.PHONY: build install dev start up down logs restart eval judge test test-plugin test-backend
+.PHONY: build install dev start up down logs restart eval judge dedup backtest test test-plugin test-backend
 
 build:
 	cd $(PLUGIN_SRC) && npm run build
@@ -44,6 +44,12 @@ eval:
 
 judge:
 	cd evals && uv run python judge.py $(ARGS)
+
+dedup:
+	cd evals && uv run python dedup_eval.py $(ARGS)
+
+backtest:
+	cd evals && uv run python build_historical_fixtures.py $(ARGS)
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 

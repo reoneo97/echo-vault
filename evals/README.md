@@ -60,6 +60,7 @@ make eval ARGS="--prompt-version v2 --notes /path/to/your/vault"
 | `avg_answer_words` | Proxy for explanation depth |
 | `generation_time_seconds` | Total wall-clock time |
 | `total_cards` | Cards generated across all files |
+| `malformed_card_rate` | Fraction failing basic structural validity (null/missing `correct_answer`, duplicate options, empty question/answer) — mechanical, catches real bugs like `correct_answer: null` seen in production logs |
 
 ### `make judge` — LLM quality scores
 
@@ -79,9 +80,55 @@ make judge ARGS="--prompt-version baseline --input /tmp/echovault_eval_output.js
 | `avg_question_clarity` | Are questions specific and unambiguous? |
 | `avg_answer_quality` | Are answers faithful and clear? |
 | `avg_distractor_quality` | Are MCQ distractors plausible? (MCQ only) |
-| `avg_overall` | Mean of all scores |
+| `avg_groundedness` | Is the answer actually supported by the source note, or added from general knowledge? |
+| `avg_overall` | Mean of all scores above (groundedness included, cognitive level excluded — it's a classification, not a score) |
+| `cognitive_ratio_recall` / `_application` / `_mechanism` / `_connection` | What fraction of cards test each kind of thinking — the real signal for "are we testing deeper, not just recall" |
 
 The per-card scores are saved as a JSON artifact in each run — open a run in MLflow and read the `judge/` artifact to see exactly which cards scored low and why.
+
+---
+
+### `make dedup` — near-duplicate detection
+
+Embeds each card (question + answer) and flags pairs above a cosine-similarity
+threshold (0.87) — catches paraphrase duplicates plain text matching misses
+(e.g. "What is FastAPI?" vs. "FastAPI is primarily used for..." across
+different notes).
+
+```bash
+make dedup ARGS="--prompt-version baseline"
+```
+
+**Metrics logged** (experiment: `echovault-dedup`): `duplicate_pair_count`,
+`duplicate_card_count`, `duplicate_rate`, `max_similarity`. The full list of
+flagged pairs (with both questions) is saved as an artifact.
+
+---
+
+### Historical backtest — comparing against real production output
+
+`backend/logs/requests.jsonl` already contains real diffs the OLD pipeline
+processed, plus the cards it actually produced. `build_historical_fixtures.py`
+turns that into a proper backtest set — no regeneration needed for the OLD
+side, since its cards are already logged:
+
+```bash
+uv run python build_historical_fixtures.py          # all logged notes
+uv run python build_historical_fixtures.py --limit 50   # most recent 50 only
+
+# Score the OLD pipeline's real historical output (free — no regeneration):
+uv run python judge.py  --input fixtures/historical/baseline_output.json --notes fixtures/historical --prompt-version old-extraction
+uv run python dedup_eval.py --input fixtures/historical/baseline_output.json --notes fixtures/historical --prompt-version old-extraction
+
+# Regenerate the SAME real notes with a new pipeline/prompt, then compare in MLflow:
+uv run python run_eval.py   --notes fixtures/historical --prompt-version agent-v1
+uv run python judge.py      --notes fixtures/historical --prompt-version agent-v1
+uv run python dedup_eval.py --notes fixtures/historical --prompt-version agent-v1
+```
+
+`fixtures/historical/` is gitignored (derived from real personal notes via the
+gitignored logs) — regenerate it locally, don't commit it. Unlike
+`fixtures/standard`/`hard` (curated, committed), this is a live extraction.
 
 ---
 
