@@ -65,5 +65,7 @@ concrete when it becomes one.
 
 The second-brain repo's `docs/echo-vault-redesign.md` (agent-first card
 generation, replacing single-shot extraction) is a separate, larger change —
-see that doc for its own design + build order. This page is scoped to the
-measurement/evaluation side specifically.
+see that doc for its own design + build order, plus `docs/harness-design.md`
+in this repo for the concrete build plan (modules, call flow, how it interfaces
+with the plugin/MCP/evals). This page is scoped to the measurement/evaluation
+side specifically.
