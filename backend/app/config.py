@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     top_p: float = 0.9
     max_tokens: int = 2048
 
+    # Card store — path to the vault's EchoVault/ directory
+    # Set ECHOVAULT_STORE_PATH in .env to e.g. /path/to/vault/EchoVault
+    echovault_store_path: str = ""
+
     # Observability
     logfire_token: str = ""
     environment: str = "development"
