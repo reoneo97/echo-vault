@@ -12,92 +12,97 @@ class TestHealthEndpoint:
         assert resp.json() == {"status": "ok"}
 
 
-class TestGenerateFlashcardsEndpoint:
-    @patch("app.routes.generate_cards_from_diff", new_callable=AsyncMock)
-    def test_generates_cards(self, mock_generate, client):
-        mock_generate.return_value = [
+class TestGenerateFlashcardsBatchEndpoint:
+    @patch("app.routes.run_pipeline", new_callable=AsyncMock)
+    def test_generates_cards(self, mock_pipeline, client):
+        mock_pipeline.return_value = [
             FlashcardPair(question="What is TCP?", answer="A transport protocol."),
         ]
 
         resp = client.post(
-            "/generate-flashcards",
-            json={"diff_content": "+ TCP is a transport protocol", "source_note": "networking.md"},
+            "/generate-flashcards-batch",
+            json={"files": [{"path": "networking.md", "diff_content": "+ TCP is a transport protocol"}]},
         )
 
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data["cards"]) == 1
-        assert data["cards"][0]["question"] == "What is TCP?"
+        assert len(data["file_results"]) == 1
+        assert data["file_results"][0]["cards"][0]["question"] == "What is TCP?"
 
-    @patch("app.routes.generate_cards_from_diff", new_callable=AsyncMock)
-    def test_passes_images_to_generator(self, mock_generate, client):
-        mock_generate.return_value = [
+    @patch("app.routes.run_pipeline", new_callable=AsyncMock)
+    def test_passes_images_to_pipeline(self, mock_pipeline, client):
+        mock_pipeline.return_value = [
             FlashcardPair(question="What does the diagram show?", answer="A cell."),
         ]
 
         resp = client.post(
-            "/generate-flashcards",
+            "/generate-flashcards-batch",
             json={
-                "diff_content": "Added ![[cell.png]]",
-                "source_note": "biology.md",
-                "images": [
+                "files": [
                     {
-                        "filename": "cell.png",
-                        "data": "aGVsbG8=",  # base64 of "hello"
-                        "media_type": "image/png",
+                        "path": "biology.md",
+                        "diff_content": "Added ![[cell.png]]",
+                        "images": [
+                            {
+                                "filename": "cell.png",
+                                "data": "aGVsbG8=",
+                                "media_type": "image/png",
+                            }
+                        ],
                     }
-                ],
+                ]
             },
         )
 
         assert resp.status_code == 200
-        # Verify images were passed through
-        call_kwargs = mock_generate.call_args
+        call_kwargs = mock_pipeline.call_args
         assert call_kwargs.kwargs.get("images") is not None
         assert len(call_kwargs.kwargs["images"]) == 1
 
     def test_empty_diff_returns_400(self, client):
         resp = client.post(
-            "/generate-flashcards",
-            json={"diff_content": "   "},
+            "/generate-flashcards-batch",
+            json={"files": [{"path": "note.md", "diff_content": "   "}]},
         )
         assert resp.status_code == 400
         assert "empty" in resp.json()["detail"]
 
-    @patch("app.routes.generate_cards_from_diff", new_callable=AsyncMock)
-    def test_no_images_passes_none(self, mock_generate, client):
-        mock_generate.return_value = []
+    @patch("app.routes.run_pipeline", new_callable=AsyncMock)
+    def test_no_images_passes_none(self, mock_pipeline, client):
+        mock_pipeline.return_value = []
 
         resp = client.post(
-            "/generate-flashcards",
-            json={"diff_content": "some text"},
+            "/generate-flashcards-batch",
+            json={"files": [{"path": "note.md", "diff_content": "some text"}]},
         )
 
         assert resp.status_code == 200
-        call_kwargs = mock_generate.call_args
+        call_kwargs = mock_pipeline.call_args
         assert call_kwargs.kwargs.get("images") is None
 
-    @patch("app.routes.generate_cards_from_diff", new_callable=AsyncMock)
-    def test_respects_max_cards(self, mock_generate, client):
-        mock_generate.return_value = [
-            FlashcardPair(question=f"Q{i}", answer=f"A{i}") for i in range(3)
-        ]
+    @patch("app.routes.run_pipeline", new_callable=AsyncMock)
+    def test_passes_tags_to_pipeline(self, mock_pipeline, client):
+        mock_pipeline.return_value = []
 
         resp = client.post(
-            "/generate-flashcards",
-            json={"diff_content": "content", "max_cards": 3},
+            "/generate-flashcards-batch",
+            json={"files": [{"path": "note.md", "diff_content": "content", "tags": ["ml", "python"]}]},
         )
 
         assert resp.status_code == 200
-        call_kwargs = mock_generate.call_args
-        assert call_kwargs.kwargs["max_cards"] == 3
+        call_kwargs = mock_pipeline.call_args
+        assert call_kwargs.kwargs.get("tags") == ["ml", "python"]
 
-    @patch("app.routes.generate_cards_from_diff", new_callable=AsyncMock)
-    def test_generator_error_propagates(self, mock_generate, client):
-        mock_generate.side_effect = Exception("LLM error")
+    @patch("app.routes.run_pipeline", new_callable=AsyncMock)
+    def test_pipeline_error_returns_file_error(self, mock_pipeline, client):
+        mock_pipeline.side_effect = Exception("LLM error")
 
-        with pytest.raises(Exception, match="LLM error"):
-            client.post(
-                "/generate-flashcards",
-                json={"diff_content": "content"},
-            )
+        resp = client.post(
+            "/generate-flashcards-batch",
+            json={"files": [{"path": "note.md", "diff_content": "content"}]},
+        )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["file_results"][0]["error"] is not None
+        assert "LLM error" in data["file_results"][0]["error"]

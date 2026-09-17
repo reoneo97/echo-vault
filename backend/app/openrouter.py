@@ -1,14 +1,18 @@
 import asyncio
 import base64
+import logging
 import re
 
+import mlflow.genai
 from pydantic_ai import Agent, BinaryContent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel as OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 
 from .config import settings
 from .schemas import FlashcardPair, GenerateResponse, ImageData
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_image_refs(text: str) -> str:
@@ -34,7 +38,8 @@ GENERATION_SETTINGS = ModelSettings(
     max_tokens=settings.max_tokens,
 )
 
-FLASHCARD_PROMPT = """You are a flashcard generator. Given new content from a user's notes, \
+# Fallback used when the MLflow registry is unreachable at startup
+_FLASHCARD_PROMPT_FALLBACK = """You are a flashcard generator. Given new content from a user's notes, \
 create flashcards that test understanding of the key concepts.
 
 Prefer multiple_choice and true_false cards wherever possible — only use standard when the \
@@ -69,6 +74,23 @@ Rules:
 - For multiple_choice, distractors must be plausible — drawn from real terms in the notes, \
 not obviously wrong.
 - Do not generate cards for trivial or obvious facts."""
+
+
+def _load_flashcard_prompt() -> str:
+    """Load the system prompt from the MLflow registry; fall back to the hardcoded string."""
+    try:
+        prompt = mlflow.genai.load_prompt("echovault-flashcard-generator")
+        messages = prompt.template if isinstance(prompt.template, list) else []
+        system_content = next((m["content"] for m in messages if m.get("role") == "system"), None)
+        if system_content:
+            logger.info("Loaded flashcard prompt from MLflow registry (version=%s)", prompt.version)
+            return system_content
+    except Exception as e:
+        logger.warning("Could not load prompt from MLflow registry, using fallback: %s", e)
+    return _FLASHCARD_PROMPT_FALLBACK
+
+
+FLASHCARD_PROMPT = _load_flashcard_prompt()
 
 HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
 

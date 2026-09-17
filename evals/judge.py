@@ -36,6 +36,7 @@ from pathlib import Path
 
 import httpx
 import mlflow
+import mlflow.genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,12 +46,12 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5001")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 JUDGE_MODEL = "qwen/qwen3-8b"  # fast + cheap for judging
-EXPERIMENT_NAME = "echovault-card-quality"
+EXPERIMENT_NAME = "echovault-evals"
 
-JUDGE_SYSTEM = """You are evaluating the quality of a flashcard generated from study notes.
+_JUDGE_SYSTEM_FALLBACK = """You are evaluating the quality of a flashcard generated from study notes.
 Score the card on the criteria below. Respond with JSON only — no explanation outside the JSON."""
 
-JUDGE_TEMPLATE = """Source note excerpt:
+_JUDGE_TEMPLATE_FALLBACK = """Source note excerpt:
 {source}
 
 Flashcard:
@@ -83,6 +84,29 @@ Also classify the card's cognitive level — what kind of thinking it actually t
 
 Respond with this JSON and nothing else:
 {{"question_clarity": <1-5>, "answer_quality": <1-5>, "distractor_quality": <1-5 or null>, "groundedness": <1-5>, "cognitive_level": "<recall|application|mechanism|connection>", "reasoning": "<one sentence>"}}"""
+
+
+def _load_judge_prompts() -> tuple[str, str]:
+    """Load judge system + user template from MLflow registry; fall back to hardcoded."""
+    import re
+    try:
+        _mlflow_url = os.getenv("MLFLOW_URL", "http://mlflow.reoneo.dev")
+        mlflow.set_tracking_uri(_mlflow_url)
+        prompt = mlflow.genai.load_prompt("echovault-card-judge")
+        messages = prompt.template if isinstance(prompt.template, list) else []
+        system = next((m["content"] for m in messages if m.get("role") == "system"), None)
+        user_tmpl = next((m["content"] for m in messages if m.get("role") == "user"), None)
+        if system and user_tmpl:
+            # Convert {{var}} → {var} for Python .format() compatibility
+            user_tmpl_py = re.sub(r'\{\{(\w+)\}\}', r'{\1}', user_tmpl)
+            print(f"Loaded judge prompts from MLflow registry (version={prompt.version})")
+            return system, user_tmpl_py
+    except Exception as e:
+        print(f"Warning: could not load judge prompts from MLflow, using fallback: {e}")
+    return _JUDGE_SYSTEM_FALLBACK, _JUDGE_TEMPLATE_FALLBACK
+
+
+JUDGE_SYSTEM, JUDGE_TEMPLATE = _load_judge_prompts()
 
 
 def format_choices(card: dict) -> str:

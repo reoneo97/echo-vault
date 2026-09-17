@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     # Set ECHOVAULT_STORE_PATH in .env to e.g. /path/to/vault/EchoVault
     echovault_store_path: str = ""
 
+    # Agent pipeline
+    critic_model: str = "google/gemini-2.0-flash-lite-001"
+
     # Observability
     mlflow_tracking_uri: str = "http://mlflow.reoneo.dev"
     mlflow_experiment_name: str = "echovault"

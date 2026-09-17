@@ -12,7 +12,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
-from .openrouter import generate_cards_from_diff, agent_health_stream, FLASHCARD_PROMPT
+from .agents.orchestrator import run_pipeline
+from .openrouter import agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
     FeedbackRequest, FeedbackResponse,
@@ -100,11 +101,12 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     start = time.time()
     tasks = [
         generate_with_retry(
-            lambda f=f, budget=budget: generate_cards_from_diff(
+            lambda f=f, budget=budget: run_pipeline(
                 diff_content=f.diff_content,
                 source_note=f.path,
                 max_cards=budget,
                 images=f.images if f.images else None,
+                tags=f.tags,
             ),
             path=f.path,
         )
@@ -167,10 +169,6 @@ async def submit_feedback(req: FeedbackRequest):
     with open(log_file, "a") as f:
         f.write(json.dumps(log_entry) + "\n")
 
-    cards_accepted.inc(log_entry["accepted"])
-    cards_rejected.inc(log_entry["rejected"])
-    cards_edited.inc(log_entry["edited"])
-
     logger.info(
         "Feedback received: %d entries (%d accepted, %d rejected, %d edited)",
         log_entry["total_entries"], log_entry["accepted"],
@@ -221,4 +219,4 @@ async def view_feedback_logs(request: Request, limit: int = Query(default=20, ge
 
 @router.get("/")
 async def root():
-    return {"repsonse":"Hello World"}
+    return {"response": "Hello World"}

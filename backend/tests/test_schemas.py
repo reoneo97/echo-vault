@@ -6,7 +6,6 @@ from app.schemas import (
     ImageData,
     GenerateRequest,
     GenerateResponse,
-    HealthResponse,
 )
 
 
@@ -82,7 +81,3 @@ class TestGenerateResponse:
         assert resp.cards == []
 
 
-class TestHealthResponse:
-    def test_valid(self):
-        resp = HealthResponse(status="ok")
-        assert resp.status == "ok"
