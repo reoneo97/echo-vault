@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     echovault_store_path: str = ""
 
     # Observability
-    logfire_token: str = ""
+    mlflow_tracking_uri: str = "http://mlflow.reoneo.dev"
     environment: str = "development"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

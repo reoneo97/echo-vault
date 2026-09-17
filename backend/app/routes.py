@@ -7,14 +7,11 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import logfire
-
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
-from .observability import batch_files, cards_generated, llm_errors, cards_accepted, cards_rejected, cards_edited
 from .openrouter import generate_cards_from_diff, agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
@@ -91,7 +88,6 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     valid_files = [f for f in req.files if f.diff_content.strip()]
     if not valid_files:
         raise HTTPException(status_code=400, detail="all diffs are empty")
-    logfire.info("batch generate started", file_count=len(valid_files))
 
     # Per-file budgets set by plugin based on word count heuristic; default 5 if missing
     budgets = [f.max_cards if f.max_cards is not None else 5 for f in valid_files]
@@ -128,21 +124,7 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     total_cards = sum(len(fr.cards) for fr in file_results)
     failures = sum(1 for fr in file_results if fr.error)
 
-    # Record custom Prometheus metrics
-    batch_files.observe(len(valid_files))
-    llm_errors.inc(failures)
-    for fr in file_results:
-        for card in fr.cards:
-            cards_generated.labels(card_type=card.type.value).inc()
-
-    logger.info("Batch done: %d cards in %.1fs across %d files", total_cards, elapsed, len(valid_files))
-    logfire.info(
-        "batch generate complete",
-        total_cards=total_cards,
-        elapsed_seconds=round(elapsed, 2),
-        files=len(valid_files),
-        failures=failures,
-    )
+    logger.info("Batch done: %d cards in %.1fs across %d files (%d failures)", total_cards, elapsed, len(valid_files), failures)
 
     # Log batch request
     log_entry = {

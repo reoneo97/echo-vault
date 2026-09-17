@@ -1,24 +1,22 @@
+import asyncio
 import base64
 import re
-import time
 
 from pydantic_ai import Agent, BinaryContent
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
-import asyncio
+from pydantic_ai.settings import ModelSettings
+
+from .config import settings
+from .schemas import FlashcardPair, GenerateResponse, ImageData
 
 
 def normalize_image_refs(text: str) -> str:
     """Convert any LLM-invented image reference formats to Obsidian ![[filename]] syntax."""
-    # @{{filename}} → ![[filename]]
     text = re.sub(r'@\{\{([^}]+)\}\}', r'![[\1]]', text)
-    # {{filename}} → ![[filename]]
     text = re.sub(r'\{\{([^}]+\.(?:png|jpg|jpeg|gif|webp|bmp))\}\}', r'![[\1]]', text, flags=re.IGNORECASE)
     return text
 
-from .config import settings
-from .schemas import FlashcardPair, GenerateResponse, ImageData
-from .observability import llm_duration
 
 provider = OpenAIProvider(
     base_url="https://openrouter.ai/api/v1",
@@ -30,7 +28,6 @@ model = OpenAIModel(
     provider=provider,
 )
 
-from pydantic_ai.settings import ModelSettings
 GENERATION_SETTINGS = ModelSettings(
     temperature=settings.temperature,
     top_p=settings.top_p,
@@ -87,15 +84,6 @@ health_agent = Agent(
 )
 
 
-# async def agent_health_stream():
-#     yield "<html><body><pre>"
-#     async with agent.run_stream(HEALTH_PROMPT) as result:
-#         async for text in result.stream_text(delta=True):
-#             yield text
-#             print(text)
-#     yield "</pre></body></html>"
-
-
 async def agent_health_stream():
     yield "<html><body><pre>"
     async with health_agent.run_stream(HEALTH_PROMPT, output_type=str) as result:
@@ -105,21 +93,15 @@ async def agent_health_stream():
     yield "</pre></body></html>"
 
 
-
-
-
 async def generate_cards_from_diff(
     diff_content: str,
     source_note: str,
     max_cards: int,
     images: list[ImageData] | None = None,
 ) -> list[FlashcardPair]:
-    
     user_message = f"Source note: {source_note}\n\nNew content:\n{diff_content}"
     if max_cards:
         user_message += f"\n\nGenerate at most {max_cards} flashcards."
-
-    t0 = time.perf_counter()
 
     if images:
         user_message += (
@@ -128,7 +110,6 @@ async def generate_cards_from_diff(
             "When referencing an image in a question, use exactly this Obsidian syntax: ![[filename]] "
             "(e.g. ![[Pasted image 20230912.png]]). Do not use any other format."
         )
-        # Build multimodal message: text + image content blocks
         message_parts: list = [user_message]
         for img in images:
             image_bytes = base64.b64decode(img.data)
@@ -138,8 +119,6 @@ async def generate_cards_from_diff(
         result = await flashcard_agent.run(message_parts, model_settings=GENERATION_SETTINGS)
     else:
         result = await flashcard_agent.run(user_message, model_settings=GENERATION_SETTINGS)
-
-    llm_duration.observe(time.perf_counter() - t0)
 
     cards = result.output.cards[:max_cards]
     for card in cards:
