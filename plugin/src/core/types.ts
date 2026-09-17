@@ -138,6 +138,7 @@ export interface GenerationResult {
 
 // Feedback types
 export interface CardFeedbackEntry {
+    card_id: string;
     question: string;
     answer: string;
     source_note: string;
@@ -147,4 +148,14 @@ export interface CardFeedbackEntry {
     edited_question?: string;
     edited_answer?: string;
     edited_type?: CardType;
+}
+
+export interface ReviewEvent {
+    card_id: string;
+    source_note: string;
+    card_type: CardType;
+    quality: number;
+    reviewed_at: string;
+    interval_days: number;
+    repetition_number: number;
 }

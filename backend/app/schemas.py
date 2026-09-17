@@ -59,6 +59,7 @@ class BatchGenerateResponse(BaseModel):
 
 
 class CardFeedbackEntry(BaseModel):
+    card_id: str
     question: str
     answer: str
     source_note: str
@@ -68,6 +69,20 @@ class CardFeedbackEntry(BaseModel):
     edited_question: str | None = None
     edited_answer: str | None = None
     edited_type: str | None = None  # set only when type was changed
+
+
+class ReviewEvent(BaseModel):
+    card_id: str
+    source_note: str
+    card_type: str
+    quality: int  # SM-2 quality 0–5
+    reviewed_at: str
+    interval_days: int
+    repetition_number: int
+
+
+class ReviewEventsRequest(BaseModel):
+    events: list[ReviewEvent]
 
 
 class FeedbackRequest(BaseModel):

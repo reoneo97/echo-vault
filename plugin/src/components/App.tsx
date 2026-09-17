@@ -210,6 +210,7 @@ export function EchoVaultApp({ plugin }: { plugin: EchoVaultPlugin }) {
         if (generationResult) {
             const feedback: CardFeedbackEntry[] = generationResult.fileGroups.flatMap((fg) =>
                 fg.cards.map((c) => ({
+                    card_id: c.id,
                     question: c.question,
                     answer: c.answer,
                     source_note: c.sourceNotePath,

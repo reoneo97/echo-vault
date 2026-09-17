@@ -1,5 +1,5 @@
 import { requestUrl } from "obsidian";
-import { EchoVaultSettings, FileDiffPayload, BatchGenerateResponse, CardFeedbackEntry } from "./types";
+import { EchoVaultSettings, FileDiffPayload, BatchGenerateResponse, CardFeedbackEntry, ReviewEvent } from "./types";
 
 export async function checkBackendHealth(
     settings: EchoVaultSettings
@@ -42,5 +42,18 @@ export async function sendFeedback(
         method: "POST",
         contentType: "application/json",
         body: JSON.stringify({ entries }),
+    });
+}
+
+export async function sendReviewEvents(
+    events: ReviewEvent[],
+    settings: EchoVaultSettings
+): Promise<void> {
+    if (events.length === 0) return;
+    await requestUrl({
+        url: `${settings.backendUrl}/review-events`,
+        method: "POST",
+        contentType: "application/json",
+        body: JSON.stringify({ events }),
     });
 }

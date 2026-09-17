@@ -17,6 +17,7 @@ from .openrouter import agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
     FeedbackRequest, FeedbackResponse,
+    ReviewEventsRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -175,6 +176,19 @@ async def submit_feedback(req: FeedbackRequest):
         log_entry["rejected"], log_entry["edited"],
     )
     return FeedbackResponse(status="ok", received=len(req.entries))
+
+
+@router.post("/review-events")
+async def submit_review_events(req: ReviewEventsRequest):
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "events": [e.model_dump() for e in req.events],
+    }
+    log_file = LOGS_DIR / "review-events.jsonl"
+    with open(log_file, "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
+    logger.info("Review events received: %d events", len(req.events))
+    return {"status": "ok", "received": len(req.events)}
 
 
 @router.get("/logs")
