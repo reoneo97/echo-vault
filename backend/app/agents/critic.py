@@ -130,11 +130,21 @@ async def critique_cards(
         else:
             approved.append(card)
 
+    usage = result.usage()
+    with mlflow.start_span(name="critic.usage") as span:
+        span.set_attributes({
+            "component": "critic",
+            "model": settings.critic_model,
+            "source_note": source_note,
+            "cards_reviewed": len(cards),
+            "cards_approved": len(approved),
+            "cards_rejected": rejected_count,
+            "request_tokens": usage.request_tokens or 0,
+            "response_tokens": usage.response_tokens or 0,
+            "total_tokens": usage.total_tokens or 0,
+        })
+
     if rejected_count:
-        try:
-            mlflow.log_metric("critic_rejected", rejected_count)
-        except Exception:
-            pass
         logger.info(
             "Critic: %d/%d cards rejected from %s",
             rejected_count, len(cards), source_note,

@@ -10,7 +10,7 @@ services:
     restart: unless-stopped
 
   mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.16.0
+    image: ghcr.io/mlflow/mlflow:v3.13.0
     container_name: echovault-mlflow
     ports:
       - "5001:5000"
@@ -22,7 +22,12 @@ services:
       --port 5000
       --backend-store-uri sqlite:////mlflow/mlflow.db
       --default-artifact-root /mlflow/artifacts
+      --serve-artifacts
     restart: unless-stopped
+    # MLflow 3.x removed the standalone AI Gateway (mlflow gateway).
+    # Usage tracking is handled by mlflow.pydantic_ai.autolog() in the backend.
+    # Each request produces a Trace with generator.usage + critic.usage spans
+    # showing model, tokens, cards generated/approved per component.
 
 volumes:
   mlflow_data:

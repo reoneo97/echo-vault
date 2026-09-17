@@ -9,6 +9,7 @@ import base64
 import logging
 from dataclasses import dataclass, field
 
+import mlflow
 from pydantic_ai import Agent, BinaryContent, RunContext
 
 from ..config import settings
@@ -114,4 +115,18 @@ async def generate_cards(
     for card in cards:
         card.question = normalize_image_refs(card.question)
         card.answer = normalize_image_refs(card.answer)
+
+    # Log component-level usage to the active MLflow trace
+    usage = result.usage()
+    with mlflow.start_span(name="generator.usage") as span:
+        span.set_attributes({
+            "component": "generator",
+            "model": settings.openrouter_model,
+            "source_note": source_note,
+            "cards_generated": len(cards),
+            "request_tokens": usage.request_tokens or 0,
+            "response_tokens": usage.response_tokens or 0,
+            "total_tokens": usage.total_tokens or 0,
+        })
+
     return cards

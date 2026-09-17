@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     # LLM
     openrouter_api_key: str = ""
-    openrouter_model: str = "qwen/qwen3.5-9b"
+    openrouter_model: str = "qwen/qwen3-32b"
     system_prompt: str = "You are a helpful assistant."
 
     # Generation hyperparameters
@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     echovault_store_path: str = ""
 
     # Agent pipeline
-    critic_model: str = "google/gemini-2.0-flash-lite-001"
+    critic_model: str = "deepseek/deepseek-v4-flash"
 
     # Observability
     mlflow_tracking_uri: str = "http://mlflow.reoneo.dev"
