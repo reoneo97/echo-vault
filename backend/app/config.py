@@ -18,6 +18,7 @@ class Settings(BaseSettings):
 
     # Observability
     mlflow_tracking_uri: str = "http://mlflow.reoneo.dev"
+    mlflow_experiment_name: str = "echovault"
     environment: str = "development"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

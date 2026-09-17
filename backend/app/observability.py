@@ -19,9 +19,11 @@ logger = logging.getLogger(__name__)
 
 def configure() -> None:
     mlflow.set_tracking_uri(settings.mlflow_tracking_uri)
+    mlflow.set_experiment(settings.mlflow_experiment_name)
     mlflow.pydantic_ai.autolog()
     logger.info(
-        "MLflow tracing configured (uri=%s, env=%s)",
+        "MLflow tracing configured (uri=%s, experiment=%s, env=%s)",
         settings.mlflow_tracking_uri,
+        settings.mlflow_experiment_name,
         settings.environment,
     )
