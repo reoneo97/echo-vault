@@ -25,6 +25,7 @@ from pydantic_ai.settings import ModelSettings
 
 from ..config import settings
 from ..schemas import FlashcardPair
+from ..utils.llm_retry import run_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +83,7 @@ async def critique_cards(
     cards: list[FlashcardPair],
     source_content: str,
     source_note: str,
+    session_id: str = "",
 ) -> list[FlashcardPair]:
     """Run critic over generated cards; return those not rejected.
 
@@ -99,12 +101,17 @@ async def critique_cards(
 
     prompt = (
         f"Source note: {source_note}\n\n"
-        f"Source excerpt:\n{source_content[:1500]}\n\n"
+        f"Source excerpt:\n{source_content[:3000]}\n\n"
         f"Cards to review:\n{cards_text}\n\n"
         f"Return a verdict for each card (indices 0–{len(cards) - 1})."
     )
 
-    result = await critic_agent.run(prompt, model_settings=CRITIC_SETTINGS)
+    result = await run_with_fallback(
+        critic_agent, prompt,
+        fallback_model_ids=settings.critic_fallback_models,
+        api_key=settings.openrouter_api_key,
+        model_settings=CRITIC_SETTINGS,
+    )
     verdicts = result.output.verdicts
     verdict_map = {v.card_index: v for v in verdicts}
 
@@ -130,10 +137,14 @@ async def critique_cards(
         else:
             approved.append(card)
 
+    note_slug = source_note.replace("/", "_").replace(".md", "")[:40]
     usage = result.usage()
     with mlflow.start_span(name="critic.usage") as span:
         span.set_attributes({
             "component": "critic",
+            "experiment": "echovault-cards",
+            "session_id": session_id,
+            "note_slug": note_slug,
             "model": settings.critic_model,
             "source_note": source_note,
             "cards_reviewed": len(cards),

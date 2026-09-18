@@ -1,16 +1,14 @@
 import asyncio
-import base64
 import logging
 import re
 
 import mlflow.genai
-from pydantic_ai import Agent, BinaryContent
+from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel as OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.settings import ModelSettings
 
 from .config import settings
-from .schemas import FlashcardPair, GenerateResponse, ImageData
 
 logger = logging.getLogger(__name__)
 
@@ -94,12 +92,6 @@ FLASHCARD_PROMPT = _load_flashcard_prompt()
 
 HEALTH_PROMPT = "Say hello and confirm this connection is working. Give a short introduction about yourself"
 
-flashcard_agent = Agent(
-    model,
-    system_prompt=FLASHCARD_PROMPT,
-    output_type=GenerateResponse,
-)
-
 health_agent = Agent(
     model,
     system_prompt=settings.system_prompt,
@@ -113,37 +105,3 @@ async def agent_health_stream():
             yield text
             await asyncio.sleep(0)
     yield "</pre></body></html>"
-
-
-async def generate_cards_from_diff(
-    diff_content: str,
-    source_note: str,
-    max_cards: int,
-    images: list[ImageData] | None = None,
-) -> list[FlashcardPair]:
-    user_message = f"Source note: {source_note}\n\nNew content:\n{diff_content}"
-    if max_cards:
-        user_message += f"\n\nGenerate at most {max_cards} flashcards."
-
-    if images:
-        user_message += (
-            f"\n\nThe content references {len(images)} image(s). "
-            "Examine the images and generate flashcards about their visual content as well. "
-            "When referencing an image in a question, use exactly this Obsidian syntax: ![[filename]] "
-            "(e.g. ![[Pasted image 20230912.png]]). Do not use any other format."
-        )
-        message_parts: list = [user_message]
-        for img in images:
-            image_bytes = base64.b64decode(img.data)
-            message_parts.append(
-                BinaryContent(data=image_bytes, media_type=img.media_type)
-            )
-        result = await flashcard_agent.run(message_parts, model_settings=GENERATION_SETTINGS)
-    else:
-        result = await flashcard_agent.run(user_message, model_settings=GENERATION_SETTINGS)
-
-    cards = result.output.cards[:max_cards]
-    for card in cards:
-        card.question = normalize_image_refs(card.question)
-        card.answer = normalize_image_refs(card.answer)
-    return cards

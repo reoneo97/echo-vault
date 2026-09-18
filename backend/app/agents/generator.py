@@ -17,6 +17,7 @@ from ..openrouter import FLASHCARD_PROMPT, GENERATION_SETTINGS, model, normalize
 from ..schemas import FlashcardPair, GenerateResponse, ImageData
 from ..tools.card_store import get_cards_for_note, get_cards_for_tags
 from ..tools.link_graph import related_notes
+from ..utils.llm_retry import run_with_fallback
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ async def generate_cards(
     images: list[ImageData] | None = None,
     tags: list[str] | None = None,
     vault_path: str = "",
+    session_id: str = "",
 ) -> list[FlashcardPair]:
     """Run the generator agent and return the cards it produces."""
     deps = GeneratorDeps(
@@ -107,9 +109,19 @@ async def generate_cards(
         for img in images:
             image_bytes = base64.b64decode(img.data)
             message_parts.append(BinaryContent(data=image_bytes, media_type=img.media_type))
-        result = await generator_agent.run(message_parts, deps=deps, model_settings=GENERATION_SETTINGS)
+        result = await run_with_fallback(
+            generator_agent, message_parts,
+            fallback_model_ids=settings.generator_fallback_models,
+            api_key=settings.openrouter_api_key,
+            deps=deps, model_settings=GENERATION_SETTINGS,
+        )
     else:
-        result = await generator_agent.run(user_message, deps=deps, model_settings=GENERATION_SETTINGS)
+        result = await run_with_fallback(
+            generator_agent, user_message,
+            fallback_model_ids=settings.generator_fallback_models,
+            api_key=settings.openrouter_api_key,
+            deps=deps, model_settings=GENERATION_SETTINGS,
+        )
 
     cards = result.output.cards[:max_cards]
     for card in cards:
@@ -117,10 +129,14 @@ async def generate_cards(
         card.answer = normalize_image_refs(card.answer)
 
     # Log component-level usage to the active MLflow trace
+    note_slug = source_note.replace("/", "_").replace(".md", "")[:40]
     usage = result.usage()
     with mlflow.start_span(name="generator.usage") as span:
         span.set_attributes({
             "component": "generator",
+            "experiment": "echovault-cards",
+            "session_id": session_id,
+            "note_slug": note_slug,
             "model": settings.openrouter_model,
             "source_note": source_note,
             "cards_generated": len(cards),

@@ -23,11 +23,13 @@ async def run_pipeline(
     tags: list[str] | None = None,
     source_content: str = "",
     vault_path: str = "",
+    session_id: str = "",
 ) -> list[FlashcardPair]:
     """Generator → critic pipeline. Returns cards that survived critic review.
 
     `source_content` is the full note text used by the critic for groundedness
     checks. Falls back to `diff_content` if not provided (new notes, first run).
+    `session_id` groups all notes in the same batch request in MLflow traces.
     """
     cards = await generate_cards(
         diff_content=diff_content,
@@ -36,12 +38,14 @@ async def run_pipeline(
         images=images,
         tags=tags or [],
         vault_path=vault_path,
+        session_id=session_id,
     )
 
     approved = await critique_cards(
         cards=cards,
         source_content=source_content or diff_content,
         source_note=source_note,
+        session_id=session_id,
     )
 
     logger.info(

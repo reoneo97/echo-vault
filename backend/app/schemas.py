@@ -93,3 +93,24 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     status: str
     received: int
+
+
+# ── Tutor ─────────────────────────────────────────────────────────────────────
+
+class TutorMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class TutorChatRequest(BaseModel):
+    session_id: str
+    message: str
+    history: list[TutorMessage] = []
+
+
+class TutorChatResponse(BaseModel):
+    session_id: str
+    reply: str
+    cards_referenced: list[str] = []
+    assessment: str = "none"
+    topic: str = ""

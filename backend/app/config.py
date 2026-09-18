@@ -18,6 +18,9 @@ class Settings(BaseSettings):
 
     # Agent pipeline
     critic_model: str = "deepseek/deepseek-v4-flash"
+    # OpenRouter provider fallbacks — tried in order when primary fails
+    generator_fallback_models: list[str] = ["qwen/qwen3-32b:nitro", "qwen/qwen3-32b:floor"]
+    critic_fallback_models: list[str] = ["deepseek/deepseek-v4-flash:nitro"]
 
     # Observability
     mlflow_tracking_uri: str = "http://mlflow.reoneo.dev"

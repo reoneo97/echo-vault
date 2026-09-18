@@ -7,17 +7,21 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+import mlflow
+
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
 from .agents.orchestrator import run_pipeline
+from .agents.tutor import tutor_chat
 from .openrouter import agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
     FeedbackRequest, FeedbackResponse,
     ReviewEventsRequest,
+    TutorChatRequest, TutorChatResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,6 +103,10 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
         len(valid_files), budgets,
     )
 
+    # One session_id groups all notes in this batch for MLflow trace filtering.
+    session_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    mlflow.set_experiment("echovault-cards")
+
     start = time.time()
     tasks = [
         generate_with_retry(
@@ -109,6 +117,7 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
                 images=f.images if f.images else None,
                 tags=f.tags,
                 vault_path=f.vault_path,
+                session_id=session_id,
             ),
             path=f.path,
         )
@@ -230,6 +239,29 @@ async def view_feedback_logs(request: Request, limit: int = Query(default=20, ge
         "request": request,
         "entries": entries,
     })
+
+
+@router.post("/tutor/chat", response_model=TutorChatResponse)
+async def tutor_chat_endpoint(req: TutorChatRequest):
+    """One turn of a Socratic tutor conversation.
+
+    Send `session_id` (client-generated, e.g. a timestamp) and the full
+    `history` on every call — the tutor is stateless server-side. History is
+    a list of {role, content} objects in chronological order.
+    """
+    history = [{"role": m.role, "content": m.content} for m in req.history]
+    output = await tutor_chat(
+        message=req.message,
+        session_id=req.session_id,
+        history=history,
+    )
+    return TutorChatResponse(
+        session_id=req.session_id,
+        reply=output.reply,
+        cards_referenced=output.cards_referenced,
+        assessment=output.assessment,
+        topic=output.topic,
+    )
 
 
 @router.get("/")

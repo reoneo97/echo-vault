@@ -56,16 +56,29 @@ def fixture_set_version(notes_dir: Path) -> str:
 
 
 def call_backend(notes: list[dict], backend_url: str) -> tuple[dict, float]:
-    payload = {"files": notes, "max_cards": 10}
+    """Send notes one at a time so each gets its own timeout.
+
+    The generator→critic pipeline can take 60–120s per note; a single
+    mega-request would need a 10min+ HTTP keepalive. Serial requests are
+    more resilient: one failure doesn't abort the whole run.
+    """
+    file_results = []
     t0 = time.perf_counter()
-    response = httpx.post(
-        f"{backend_url}/generate-flashcards-batch",
-        json=payload,
-        timeout=120.0,
-    )
+    for note in notes:
+        try:
+            resp = httpx.post(
+                f"{backend_url}/generate-flashcards-batch",
+                json={"files": [note], "max_cards": 10},
+                timeout=180.0,
+            )
+            resp.raise_for_status()
+            file_results.extend(resp.json().get("file_results", []))
+            print(f"  ✓ {note['path']} ({len(file_results[-1]['cards'])} cards)")
+        except Exception as e:
+            print(f"  ✗ {note['path']}: {e}")
+            file_results.append({"source_note": note["path"], "cards": [], "error": str(e)})
     elapsed = time.perf_counter() - t0
-    response.raise_for_status()
-    return response.json(), elapsed
+    return {"file_results": file_results}, elapsed
 
 
 def is_malformed(card: dict) -> str | None:
