@@ -54,6 +54,9 @@ export interface EchoVaultSettings {
     dataFileName: string;
     maxCardsPerGeneration: number;
     hasSeenTutorial: boolean;
+    /** Comma-separated folder prefixes to process, e.g. "knowledge,courses".
+     *  Empty string = process entire vault. */
+    scopedFolders: string;
 }
 
 export const DEFAULT_SETTINGS: EchoVaultSettings = {
@@ -62,6 +65,7 @@ export const DEFAULT_SETTINGS: EchoVaultSettings = {
     dataFileName: "flashcards.json",
     maxCardsPerGeneration: 10,
     hasSeenTutorial: false,
+    scopedFolders: "",
 };
 
 export interface ImageAttachment {
@@ -80,6 +84,7 @@ export interface FileDiffPayload {
     images?: ImageAttachment[];
     max_cards?: number;
     tags?: string[];
+    vault_path?: string;
 }
 
 export interface FileResult {

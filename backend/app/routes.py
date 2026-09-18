@@ -108,6 +108,7 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
                 max_cards=budget,
                 images=f.images if f.images else None,
                 tags=f.tags,
+                vault_path=f.vault_path,
             ),
             path=f.path,
         )

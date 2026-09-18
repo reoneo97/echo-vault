@@ -65,5 +65,21 @@ export class EchoVaultSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
             );
+
+        new Setting(containerEl)
+            .setName("Scoped folders")
+            .setDesc(
+                "Only generate cards from notes inside these folders (comma-separated, e.g. \"knowledge,courses\"). " +
+                "Leave empty to process the entire vault."
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder("knowledge,courses")
+                    .setValue(this.plugin.settings.scopedFolders)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scopedFolders = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
     }
 }

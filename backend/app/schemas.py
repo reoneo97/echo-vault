@@ -41,6 +41,7 @@ class FileDiffEntry(BaseModel):
     images: list[ImageData] = []
     max_cards: int | None = None
     tags: list[str] = []
+    vault_path: str = ""
 
 
 class BatchGenerateRequest(BaseModel):
