@@ -97,8 +97,11 @@ def _load_judge_prompts() -> tuple[str, str]:
         system = next((m["content"] for m in messages if m.get("role") == "system"), None)
         user_tmpl = next((m["content"] for m in messages if m.get("role") == "user"), None)
         if system and user_tmpl:
-            # Convert {{var}} → {var} for Python .format() compatibility
-            user_tmpl_py = re.sub(r'\{\{(\w+)\}\}', r'{\1}', user_tmpl)
+            # Escape all literal braces first so JSON examples in the template
+            # (e.g. {"key": 1}) don't confuse Python's .format().  Then
+            # un-escape only the MLflow {{var}} placeholders (now {{{{var}}}}).
+            user_tmpl_py = user_tmpl.replace("{", "{{").replace("}", "}}")
+            user_tmpl_py = re.sub(r'\{\{\{\{(\w+)\}\}\}\}', r'{\1}', user_tmpl_py)
             print(f"Loaded judge prompts from MLflow registry (version={prompt.version})")
             return system, user_tmpl_py
     except Exception as e:
@@ -295,29 +298,36 @@ def main():
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
-    # Log to MLflow
-    mlflow.set_tracking_uri(args.mlflow)
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    # Always save per-card scores locally
+    artifact_path = Path("/tmp/echovault_judge_output.json")
+    artifact_path.write_text(json.dumps(per_card, indent=2))
+    print(f"\nPer-card scores saved to: {artifact_path}")
 
-    fixture_hash = fixture_set_hash(args.notes)
-    fixture_version = fixture_set_version(args.notes)
+    try:
+        mlflow.set_tracking_uri(args.mlflow)
+        mlflow.set_experiment(EXPERIMENT_NAME)
 
-    with mlflow.start_run() as run:
-        mlflow.log_param("prompt_version", args.prompt_version)
-        mlflow.log_param("judge_model", JUDGE_MODEL)
-        mlflow.log_param("fixture_set_version", fixture_version)
-        mlflow.log_param("fixture_set_hash", fixture_hash)
-        mlflow.log_param("notes_dir", str(args.notes))
-        for k, v in metrics.items():
-            mlflow.log_metric(k, v)
+        fixture_hash = fixture_set_hash(args.notes)
+        fixture_version = fixture_set_version(args.notes)
 
-        # Save per-card scores as artifact for inspection
-        artifact_path = Path("/tmp/echovault_judge_output.json")
-        artifact_path.write_text(json.dumps(per_card, indent=2))
-        mlflow.log_artifact(str(artifact_path), artifact_path="judge")
+        with mlflow.start_run() as run:
+            mlflow.log_param("prompt_version", args.prompt_version)
+            mlflow.log_param("judge_model", JUDGE_MODEL)
+            mlflow.log_param("fixture_set_version", fixture_version)
+            mlflow.log_param("fixture_set_hash", fixture_hash)
+            mlflow.log_param("notes_dir", str(args.notes))
+            for k, v in metrics.items():
+                mlflow.log_metric(k, v)
 
-        print(f"\nRun ID: {run.info.run_id}")
-        print(f"View at: {args.mlflow}")
+            try:
+                mlflow.log_artifact(str(artifact_path), artifact_path="judge")
+            except OSError as e:
+                print(f"Warning: artifact upload skipped ({e})")
+
+            print(f"🏃 View run {run.info.run_name} at: {args.mlflow}/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
+            print(f"🧪 View experiment at: {args.mlflow}")
+    except Exception as e:
+        print(f"\nWarning: MLflow logging failed ({e}) — scores printed above")
 
 
 if __name__ == "__main__":
