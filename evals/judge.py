@@ -124,7 +124,7 @@ def format_choices(card: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def judge_card(card: dict, source: str) -> dict | None:
+def judge_card(card: dict, source: str, note_slug: str = "") -> dict | None:
     """Call the judge LLM and return parsed scores, or None on failure."""
     choices_section = format_choices(card)
     prompt = JUDGE_TEMPLATE.format(
@@ -161,10 +161,31 @@ def judge_card(card: dict, source: str) -> dict | None:
             if content.startswith("json"):
                 content = content[4:]
 
-        return json.loads(content)
+        scores = json.loads(content)
     except Exception as e:
         print(f"  Judge error: {e}")
         return None
+
+    # Best-effort span — records scores as trace attributes in the active experiment
+    try:
+        with mlflow.start_span(
+            name="judge_card",
+            attributes={
+                "component": "judge",
+                "model": JUDGE_MODEL,
+                "note_slug": note_slug,
+                "card_type": card.get("type", "standard"),
+                "question_clarity": scores.get("question_clarity"),
+                "answer_quality": scores.get("answer_quality"),
+                "groundedness": scores.get("groundedness"),
+                "cognitive_level": scores.get("cognitive_level", ""),
+            },
+        ):
+            pass
+    except Exception:
+        pass
+
+    return scores
 
 
 def score_response(response: dict) -> tuple[dict, list[dict]]:
@@ -193,7 +214,7 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
 
         for i, card in enumerate(cards):
             print(f"    Card {i+1}/{len(cards)}: {card.get('question', '')[:60]}...")
-            scores = judge_card(card, source)
+            scores = judge_card(card, source, note_slug=fr["source_note"])
             time.sleep(0.3)  # gentle rate limiting
 
             if scores is None:
@@ -292,6 +313,13 @@ def main():
     total_cards = sum(len(fr.get("cards", [])) for fr in response.get("file_results", []))
     print(f"\nJudging {total_cards} cards with {JUDGE_MODEL} ...")
 
+    # Set up MLflow before scoring so judge_card spans land in the right experiment
+    try:
+        mlflow.set_tracking_uri(args.mlflow)
+        mlflow.set_experiment(EXPERIMENT_NAME)
+    except Exception as e:
+        print(f"Warning: MLflow setup failed ({e}) — judging will proceed without traces")
+
     metrics, per_card = score_response(response)
 
     print("\nQuality scores:")
@@ -304,9 +332,6 @@ def main():
     print(f"\nPer-card scores saved to: {artifact_path}")
 
     try:
-        mlflow.set_tracking_uri(args.mlflow)
-        mlflow.set_experiment(EXPERIMENT_NAME)
-
         fixture_hash = fixture_set_hash(args.notes)
         fixture_version = fixture_set_version(args.notes)
 

@@ -68,7 +68,7 @@ def call_backend(notes: list[dict], backend_url: str) -> tuple[dict, float]:
         try:
             resp = httpx.post(
                 f"{backend_url}/generate-flashcards-batch",
-                json={"files": [note], "max_cards": 10},
+                json={"files": [note], "max_cards": 10, "source": "eval"},
                 timeout=180.0,
             )
             resp.raise_for_status()

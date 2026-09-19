@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -47,6 +47,7 @@ class FileDiffEntry(BaseModel):
 class BatchGenerateRequest(BaseModel):
     files: list[FileDiffEntry]
     max_cards: int = 10
+    source: Literal["live", "eval"] = "live"
 
 
 class FileResultEntry(BaseModel):

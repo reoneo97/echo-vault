@@ -105,7 +105,8 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
 
     # One session_id groups all notes in this batch for MLflow trace filtering.
     session_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    mlflow.set_experiment("echovault-cards")
+    experiment = "echovault-cards-evals" if req.source == "eval" else "echovault-cards"
+    mlflow.set_experiment(experiment)
 
     start = time.time()
     tasks = [
