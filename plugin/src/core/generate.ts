@@ -208,13 +208,16 @@ export async function commitAndGenerate(
         new Notice(`Processing ${MAX_FILES_PER_COMMIT_BATCH} of ${unprocessedFiles.length} changed files. ${overflow.length} more queued — use "Import Existing Notes" to continue.`);
     }
 
-    // Apply scoped-folder filter
+    // Apply scoped-folder filter + skip auto-generated index/internal files (_*.md)
     const scopePrefixes = settings.scopedFolders
         ? settings.scopedFolders.split(",").map((s) => s.trim()).filter(Boolean).map((s) => s.endsWith("/") ? s : s + "/")
         : [];
-    const scopedFiles = scopePrefixes.length > 0
-        ? filesToProcess.filter((f) => scopePrefixes.some((p) => f.path.startsWith(p)))
-        : filesToProcess;
+    const scopedFiles = filesToProcess.filter((f) => {
+        if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
+        const basename = f.path.split("/").pop() ?? "";
+        if (basename.startsWith("_")) return false;
+        return true;
+    });
     if (scopedFiles.length < filesToProcess.length) {
         logger?.info("Scoped folder filter applied", { total: filesToProcess.length, inScope: scopedFiles.length });
     }
@@ -460,6 +463,8 @@ export async function importVault(
     const allFiles = vault.getMarkdownFiles().filter((f) => {
         if (EXCLUDED_PREFIXES.some((prefix) => f.path.startsWith(prefix))) return false;
         if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
+        const basename = f.path.split("/").pop() ?? "";
+        if (basename.startsWith("_")) return false;
         return true;
     });
 
