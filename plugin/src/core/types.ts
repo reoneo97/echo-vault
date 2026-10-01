@@ -57,6 +57,10 @@ export interface EchoVaultSettings {
     /** Comma-separated folder prefixes to process, e.g. "knowledge,courses".
      *  Empty string = process entire vault. */
     scopedFolders: string;
+    /** Comma-separated filename prefixes to skip, e.g. "_,README".
+     *  Matches against the basename only. Default "_" skips auto-generated
+     *  index files (_index.md, _templates, etc.). */
+    excludeFilePrefixes: string;
 }
 
 export const DEFAULT_SETTINGS: EchoVaultSettings = {
@@ -66,6 +70,7 @@ export const DEFAULT_SETTINGS: EchoVaultSettings = {
     maxCardsPerGeneration: 10,
     hasSeenTutorial: false,
     scopedFolders: "",
+    excludeFilePrefixes: "_",
 };
 
 export interface ImageAttachment {

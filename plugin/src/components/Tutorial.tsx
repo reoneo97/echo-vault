@@ -41,6 +41,13 @@ const STEPS = [
         ),
     },
     {
+        title: "Scope your vault",
+        description: "If your vault has a structured layout, set \"Scoped folders\" in settings to only generate cards from your knowledge notes (e.g. \"knowledge\"). Set \"Exclude file prefixes\" to skip auto-generated index files — the default \"_\" already handles _index.md files.",
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+        ),
+    },
+    {
         title: "You're all set!",
         description: "Start by committing some notes to generate your first flashcards, or create a card manually to get a feel for the review flow.",
         icon: (

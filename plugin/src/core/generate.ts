@@ -208,14 +208,17 @@ export async function commitAndGenerate(
         new Notice(`Processing ${MAX_FILES_PER_COMMIT_BATCH} of ${unprocessedFiles.length} changed files. ${overflow.length} more queued — use "Import Existing Notes" to continue.`);
     }
 
-    // Apply scoped-folder filter + skip auto-generated index/internal files (_*.md)
+    // Apply scoped-folder filter + skip files matching excludeFilePrefixes (e.g. _index.md)
     const scopePrefixes = settings.scopedFolders
         ? settings.scopedFolders.split(",").map((s) => s.trim()).filter(Boolean).map((s) => s.endsWith("/") ? s : s + "/")
+        : [];
+    const excludePrefixes = settings.excludeFilePrefixes
+        ? settings.excludeFilePrefixes.split(",").map((s) => s.trim()).filter(Boolean)
         : [];
     const scopedFiles = filesToProcess.filter((f) => {
         if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
         const basename = f.path.split("/").pop() ?? "";
-        if (basename.startsWith("_")) return false;
+        if (excludePrefixes.some((p) => basename.startsWith(p))) return false;
         return true;
     });
     if (scopedFiles.length < filesToProcess.length) {
@@ -460,11 +463,14 @@ export async function importVault(
     const scopePrefixes = settings.scopedFolders
         ? settings.scopedFolders.split(",").map((s) => s.trim()).filter(Boolean).map((s) => s.endsWith("/") ? s : s + "/")
         : [];
+    const excludePrefixes = settings.excludeFilePrefixes
+        ? settings.excludeFilePrefixes.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
     const allFiles = vault.getMarkdownFiles().filter((f) => {
         if (EXCLUDED_PREFIXES.some((prefix) => f.path.startsWith(prefix))) return false;
         if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
         const basename = f.path.split("/").pop() ?? "";
-        if (basename.startsWith("_")) return false;
+        if (excludePrefixes.some((p) => basename.startsWith(p))) return false;
         return true;
     });
 

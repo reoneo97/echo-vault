@@ -81,5 +81,22 @@ export class EchoVaultSettingTab extends PluginSettingTab {
                         await this.plugin.saveSettings();
                     })
             );
+
+        new Setting(containerEl)
+            .setName("Exclude file prefixes")
+            .setDesc(
+                "Skip files whose name starts with these prefixes (comma-separated). " +
+                "Default \"_\" skips auto-generated index files like _index.md. " +
+                "Clear this field to process all files."
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder("_")
+                    .setValue(this.plugin.settings.excludeFilePrefixes)
+                    .onChange(async (value) => {
+                        this.plugin.settings.excludeFilePrefixes = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
     }
 }

@@ -158,6 +158,8 @@ Keyboard shortcuts during review: `Space` to reveal answer, `1–4` to rate (Aga
 | Backend URL | `http://localhost:8000` | Where the backend is running |
 | Flashcard folder | `EchoVault` | Vault folder for storing card data |
 | Max cards per generation | `10` | Global cap on cards per commit |
+| Scoped folders | *(empty)* | Only process notes inside these folders (comma-separated, e.g. `knowledge`). Empty = entire vault. **Set this if your vault has a structured layout.** |
+| Exclude file prefixes | `_` | Skip files whose basename starts with these prefixes (comma-separated). The default `_` skips auto-generated index files such as `_index.md`. Clear to process all files. |
 
 ---
 
