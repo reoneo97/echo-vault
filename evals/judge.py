@@ -46,7 +46,7 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5001")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 JUDGE_MODEL = "qwen/qwen3-8b"  # fast + cheap for judging
-EXPERIMENT_NAME = "echovault-evals"
+EXPERIMENT_NAME = "echovault-cards-evals"
 
 _JUDGE_SYSTEM_FALLBACK = """You are evaluating the quality of a flashcard generated from study notes.
 Score the card on the criteria below. Respond with JSON only — no explanation outside the JSON."""
