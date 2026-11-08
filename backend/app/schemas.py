@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -41,11 +41,13 @@ class FileDiffEntry(BaseModel):
     images: list[ImageData] = []
     max_cards: int | None = None
     tags: list[str] = []
+    vault_path: str = ""
 
 
 class BatchGenerateRequest(BaseModel):
     files: list[FileDiffEntry]
     max_cards: int = 10
+    source: Literal["live", "eval"] = "live"
 
 
 class FileResultEntry(BaseModel):
@@ -59,6 +61,7 @@ class BatchGenerateResponse(BaseModel):
 
 
 class CardFeedbackEntry(BaseModel):
+    card_id: str
     question: str
     answer: str
     source_note: str
@@ -70,6 +73,20 @@ class CardFeedbackEntry(BaseModel):
     edited_type: str | None = None  # set only when type was changed
 
 
+class ReviewEvent(BaseModel):
+    card_id: str
+    source_note: str
+    card_type: str
+    quality: int  # SM-2 quality 0–5
+    reviewed_at: str
+    interval_days: int
+    repetition_number: int
+
+
+class ReviewEventsRequest(BaseModel):
+    events: list[ReviewEvent]
+
+
 class FeedbackRequest(BaseModel):
     entries: list[CardFeedbackEntry]
 
@@ -77,3 +94,24 @@ class FeedbackRequest(BaseModel):
 class FeedbackResponse(BaseModel):
     status: str
     received: int
+
+
+# ── Tutor ─────────────────────────────────────────────────────────────────────
+
+class TutorMessage(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class TutorChatRequest(BaseModel):
+    session_id: str
+    message: str
+    history: list[TutorMessage] = []
+
+
+class TutorChatResponse(BaseModel):
+    session_id: str
+    reply: str
+    cards_referenced: list[str] = []
+    assessment: str = "none"
+    topic: str = ""

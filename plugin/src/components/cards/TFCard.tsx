@@ -1,4 +1,4 @@
-import { TFFlashcard } from "../../types";
+import { TFFlashcard } from "../../core/types";
 
 interface TFCardProps {
     card: TFFlashcard;

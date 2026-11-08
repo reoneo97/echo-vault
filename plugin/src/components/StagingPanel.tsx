@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { App } from "obsidian";
-import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry, CardType } from "../types";
-import { generateId, nowISO, getTodayDateString } from "../utils";
+import { Flashcard, GenerationResult, StagedCard, StagedFileGroup, CardFeedbackEntry, CardType } from "../core/types";
+import { generateId, nowISO, getTodayDateString } from "../core/utils";
 import { MarkdownText } from "./MarkdownText";
 
 interface StagingPanelProps {
@@ -75,10 +75,13 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
         const now = nowISO();
         const today = getTodayDateString();
 
+        // Pre-generate stable IDs so feedback entries can reference them
+        const idByTempId = new Map(accepted.map((c) => [c.tempId, generateId()]));
+
         const acceptedCards: Flashcard[] = accepted.map((c) => {
             const resolvedType = c.editedCardType ?? c.cardType;
             const base = {
-                id: generateId(),
+                id: idByTempId.get(c.tempId)!,
                 question: c.editedQuestion ?? c.question,
                 answer: c.editedAnswer ?? c.answer,
                 sourceNotePath: c.sourceNotePath,
@@ -105,6 +108,8 @@ export function StagingPanel({ app, generationResult, onConfirm, onCancel }: Sta
         const feedback: CardFeedbackEntry[] = allCards
             .filter((c) => c.decision !== null)
             .map((c) => ({
+                // Accepted cards get their store ID; rejected cards use tempId
+                card_id: idByTempId.get(c.tempId) ?? c.tempId,
                 question: c.question,
                 answer: c.answer,
                 source_note: c.sourceNotePath,

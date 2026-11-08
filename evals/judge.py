@@ -36,6 +36,7 @@ from pathlib import Path
 
 import httpx
 import mlflow
+import mlflow.genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -45,12 +46,12 @@ BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5001")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 JUDGE_MODEL = "qwen/qwen3-8b"  # fast + cheap for judging
-EXPERIMENT_NAME = "echovault-card-quality"
+EXPERIMENT_NAME = "echovault-cards-evals"
 
-JUDGE_SYSTEM = """You are evaluating the quality of a flashcard generated from study notes.
+_JUDGE_SYSTEM_FALLBACK = """You are evaluating the quality of a flashcard generated from study notes.
 Score the card on the criteria below. Respond with JSON only — no explanation outside the JSON."""
 
-JUDGE_TEMPLATE = """Source note excerpt:
+_JUDGE_TEMPLATE_FALLBACK = """Source note excerpt:
 {source}
 
 Flashcard:
@@ -85,6 +86,32 @@ Respond with this JSON and nothing else:
 {{"question_clarity": <1-5>, "answer_quality": <1-5>, "distractor_quality": <1-5 or null>, "groundedness": <1-5>, "cognitive_level": "<recall|application|mechanism|connection>", "reasoning": "<one sentence>"}}"""
 
 
+def _load_judge_prompts() -> tuple[str, str]:
+    """Load judge system + user template from MLflow registry; fall back to hardcoded."""
+    import re
+    try:
+        _mlflow_url = os.getenv("MLFLOW_URL", "http://mlflow.reoneo.dev")
+        mlflow.set_tracking_uri(_mlflow_url)
+        prompt = mlflow.genai.load_prompt("echovault-card-judge")
+        messages = prompt.template if isinstance(prompt.template, list) else []
+        system = next((m["content"] for m in messages if m.get("role") == "system"), None)
+        user_tmpl = next((m["content"] for m in messages if m.get("role") == "user"), None)
+        if system and user_tmpl:
+            # Escape all literal braces first so JSON examples in the template
+            # (e.g. {"key": 1}) don't confuse Python's .format().  Then
+            # un-escape only the MLflow {{var}} placeholders (now {{{{var}}}}).
+            user_tmpl_py = user_tmpl.replace("{", "{{").replace("}", "}}")
+            user_tmpl_py = re.sub(r'\{\{\{\{(\w+)\}\}\}\}', r'{\1}', user_tmpl_py)
+            print(f"Loaded judge prompts from MLflow registry (version={prompt.version})")
+            return system, user_tmpl_py
+    except Exception as e:
+        print(f"Warning: could not load judge prompts from MLflow, using fallback: {e}")
+    return _JUDGE_SYSTEM_FALLBACK, _JUDGE_TEMPLATE_FALLBACK
+
+
+JUDGE_SYSTEM, JUDGE_TEMPLATE = _load_judge_prompts()
+
+
 def format_choices(card: dict) -> str:
     options = card.get("options") or []
     correct = card.get("correct_answer", "")
@@ -97,7 +124,7 @@ def format_choices(card: dict) -> str:
     return "\n".join(lines) + "\n"
 
 
-def judge_card(card: dict, source: str) -> dict | None:
+def judge_card(card: dict, source: str, note_slug: str = "") -> dict | None:
     """Call the judge LLM and return parsed scores, or None on failure."""
     choices_section = format_choices(card)
     prompt = JUDGE_TEMPLATE.format(
@@ -134,10 +161,31 @@ def judge_card(card: dict, source: str) -> dict | None:
             if content.startswith("json"):
                 content = content[4:]
 
-        return json.loads(content)
+        scores = json.loads(content)
     except Exception as e:
         print(f"  Judge error: {e}")
         return None
+
+    # Best-effort span — records scores as trace attributes in the active experiment
+    try:
+        with mlflow.start_span(
+            name="judge_card",
+            attributes={
+                "component": "judge",
+                "model": JUDGE_MODEL,
+                "note_slug": note_slug,
+                "card_type": card.get("type", "standard"),
+                "question_clarity": scores.get("question_clarity"),
+                "answer_quality": scores.get("answer_quality"),
+                "groundedness": scores.get("groundedness"),
+                "cognitive_level": scores.get("cognitive_level", ""),
+            },
+        ):
+            pass
+    except Exception:
+        pass
+
+    return scores
 
 
 def score_response(response: dict) -> tuple[dict, list[dict]]:
@@ -166,7 +214,7 @@ def score_response(response: dict) -> tuple[dict, list[dict]]:
 
         for i, card in enumerate(cards):
             print(f"    Card {i+1}/{len(cards)}: {card.get('question', '')[:60]}...")
-            scores = judge_card(card, source)
+            scores = judge_card(card, source, note_slug=fr["source_note"])
             time.sleep(0.3)  # gentle rate limiting
 
             if scores is None:
@@ -265,35 +313,46 @@ def main():
     total_cards = sum(len(fr.get("cards", [])) for fr in response.get("file_results", []))
     print(f"\nJudging {total_cards} cards with {JUDGE_MODEL} ...")
 
+    # Set up MLflow before scoring so judge_card spans land in the right experiment
+    try:
+        mlflow.set_tracking_uri(args.mlflow)
+        mlflow.set_experiment(EXPERIMENT_NAME)
+    except Exception as e:
+        print(f"Warning: MLflow setup failed ({e}) — judging will proceed without traces")
+
     metrics, per_card = score_response(response)
 
     print("\nQuality scores:")
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
-    # Log to MLflow
-    mlflow.set_tracking_uri(args.mlflow)
-    mlflow.set_experiment(EXPERIMENT_NAME)
+    # Always save per-card scores locally
+    artifact_path = Path("/tmp/echovault_judge_output.json")
+    artifact_path.write_text(json.dumps(per_card, indent=2))
+    print(f"\nPer-card scores saved to: {artifact_path}")
 
-    fixture_hash = fixture_set_hash(args.notes)
-    fixture_version = fixture_set_version(args.notes)
+    try:
+        fixture_hash = fixture_set_hash(args.notes)
+        fixture_version = fixture_set_version(args.notes)
 
-    with mlflow.start_run() as run:
-        mlflow.log_param("prompt_version", args.prompt_version)
-        mlflow.log_param("judge_model", JUDGE_MODEL)
-        mlflow.log_param("fixture_set_version", fixture_version)
-        mlflow.log_param("fixture_set_hash", fixture_hash)
-        mlflow.log_param("notes_dir", str(args.notes))
-        for k, v in metrics.items():
-            mlflow.log_metric(k, v)
+        with mlflow.start_run() as run:
+            mlflow.log_param("prompt_version", args.prompt_version)
+            mlflow.log_param("judge_model", JUDGE_MODEL)
+            mlflow.log_param("fixture_set_version", fixture_version)
+            mlflow.log_param("fixture_set_hash", fixture_hash)
+            mlflow.log_param("notes_dir", str(args.notes))
+            for k, v in metrics.items():
+                mlflow.log_metric(k, v)
 
-        # Save per-card scores as artifact for inspection
-        artifact_path = Path("/tmp/echovault_judge_output.json")
-        artifact_path.write_text(json.dumps(per_card, indent=2))
-        mlflow.log_artifact(str(artifact_path), artifact_path="judge")
+            try:
+                mlflow.log_artifact(str(artifact_path), artifact_path="judge")
+            except OSError as e:
+                print(f"Warning: artifact upload skipped ({e})")
 
-        print(f"\nRun ID: {run.info.run_id}")
-        print(f"View at: {args.mlflow}")
+            print(f"🏃 View run {run.info.run_name} at: {args.mlflow}/#/experiments/{run.info.experiment_id}/runs/{run.info.run_id}")
+            print(f"🧪 View experiment at: {args.mlflow}")
+    except Exception as e:
+        print(f"\nWarning: MLflow logging failed ({e}) — scores printed above")
 
 
 if __name__ == "__main__":

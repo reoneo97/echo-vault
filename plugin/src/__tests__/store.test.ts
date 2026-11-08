@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { FlashcardStore } from "../core/store";
-import { Flashcard, EchoVaultSettings, DEFAULT_SETTINGS } from "../types";
+import { Flashcard, EchoVaultSettings, DEFAULT_SETTINGS } from "../core/types";
 
 function createMockVault(data: Record<string, string> = {}) {
     const store = new Map(Object.entries(data));

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import type EchoVaultPlugin from "../main";
-import { Flashcard } from "../types";
+import { Flashcard } from "../core/types";
 import { sm2 } from "../core/sm2";
-import { nowISO } from "../utils";
+import { nowISO } from "../core/utils";
+import { sendReviewEvents } from "../core/api-client";
+import type { ReviewEvent } from "../core/types";
 import { MCQCard } from "./cards/MCQCard";
 import { TFCard } from "./cards/TFCard";
 import { RatingButtons } from "./cards/RatingButtons";
@@ -103,6 +105,17 @@ export function ReviewSession({ plugin, reviewAll = false, initialCards, onCompl
 
         await plugin.store.updateCard(card);
         await plugin.reviewLog.recordReview(quality >= 3, quality);
+
+        const event: ReviewEvent = {
+            card_id: card.id,
+            source_note: card.sourceNotePath,
+            card_type: card.type,
+            quality,
+            reviewed_at: card.lastReviewedAt!,
+            interval_days: card.interval,
+            repetition_number: card.repetitions,
+        };
+        sendReviewEvents([event], plugin.settings).catch(() => {/* best-effort */});
 
         const next = currentIndex + 1;
         setHighWaterMark((prev) => Math.max(prev, next));

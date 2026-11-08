@@ -54,6 +54,13 @@ export interface EchoVaultSettings {
     dataFileName: string;
     maxCardsPerGeneration: number;
     hasSeenTutorial: boolean;
+    /** Comma-separated folder prefixes to process, e.g. "knowledge,courses".
+     *  Empty string = process entire vault. */
+    scopedFolders: string;
+    /** Comma-separated filename prefixes to skip, e.g. "_,README".
+     *  Matches against the basename only. Default "_" skips auto-generated
+     *  index files (_index.md, _templates, etc.). */
+    excludeFilePrefixes: string;
 }
 
 export const DEFAULT_SETTINGS: EchoVaultSettings = {
@@ -62,6 +69,8 @@ export const DEFAULT_SETTINGS: EchoVaultSettings = {
     dataFileName: "flashcards.json",
     maxCardsPerGeneration: 10,
     hasSeenTutorial: false,
+    scopedFolders: "",
+    excludeFilePrefixes: "_",
 };
 
 export interface ImageAttachment {
@@ -80,6 +89,7 @@ export interface FileDiffPayload {
     images?: ImageAttachment[];
     max_cards?: number;
     tags?: string[];
+    vault_path?: string;
 }
 
 export interface FileResult {
@@ -138,6 +148,7 @@ export interface GenerationResult {
 
 // Feedback types
 export interface CardFeedbackEntry {
+    card_id: string;
     question: string;
     answer: string;
     source_note: string;
@@ -147,4 +158,14 @@ export interface CardFeedbackEntry {
     edited_question?: string;
     edited_answer?: string;
     edited_type?: CardType;
+}
+
+export interface ReviewEvent {
+    card_id: string;
+    source_note: string;
+    card_type: CardType;
+    quality: number;
+    reviewed_at: string;
+    interval_days: number;
+    repetition_number: number;
 }

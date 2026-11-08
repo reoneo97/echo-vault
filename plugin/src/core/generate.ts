@@ -3,8 +3,8 @@ import { gitCommit, gitDiff, gitResetLastCommit, isOwnGitRepo, gitInit, gitHasCo
 import { generateFlashcardsBatch } from "./api-client";
 import { FlashcardStore } from "./store";
 import { Logger } from "./logger";
-import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "../types";
-import { generateId, hashContent, cardBudget, extractFrontmatterTags } from "../utils";
+import { EchoVaultSettings, ImageAttachment, FileDiffPayload, GenerationResult, StagedCard, StagedFileGroup, FileResult } from "./types";
+import { generateId, hashContent, cardBudget, extractFrontmatterTags } from "./utils";
 
 /** Maps a backend FileResult card to the type fields needed by StagedCard. */
 function mapCardTypeFields(c: FileResult["cards"][number]): Pick<StagedCard, "cardType" | "choices" | "correctIndex" | "correctValue"> {
@@ -208,10 +208,31 @@ export async function commitAndGenerate(
         new Notice(`Processing ${MAX_FILES_PER_COMMIT_BATCH} of ${unprocessedFiles.length} changed files. ${overflow.length} more queued — use "Import Existing Notes" to continue.`);
     }
 
+    // Apply scoped-folder filter + skip files matching excludeFilePrefixes (e.g. _index.md)
+    const scopePrefixes = settings.scopedFolders
+        ? settings.scopedFolders.split(",").map((s) => s.trim()).filter(Boolean).map((s) => s.endsWith("/") ? s : s + "/")
+        : [];
+    const excludePrefixes = settings.excludeFilePrefixes
+        ? settings.excludeFilePrefixes.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+    const scopedFiles = filesToProcess.filter((f) => {
+        if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
+        const basename = f.path.split("/").pop() ?? "";
+        if (excludePrefixes.some((p) => basename.startsWith(p))) return false;
+        return true;
+    });
+    if (scopedFiles.length < filesToProcess.length) {
+        logger?.info("Scoped folder filter applied", { total: filesToProcess.length, inScope: scopedFiles.length });
+    }
+    if (scopedFiles.length === 0) {
+        new Notice("No changed files matched the scoped folders setting.");
+        return null;
+    }
+
     // Resolve images per file and extract frontmatter tags
     const payloads: FileDiffPayload[] = [];
     const tagsMap: Record<string, string[]> = {};
-    for (const file of filesToProcess) {
+    for (const file of scopedFiles) {
         tagsMap[file.path] = extractFrontmatterTags(file.content);
         const imageRefs = extractImageRefs(file.content);
         let images: ImageAttachment[] = [];
@@ -223,6 +244,7 @@ export async function commitAndGenerate(
             path: file.path,
             diff_content: file.content,
             max_cards: cardBudget(file.content),
+            vault_path: vaultPath,
             ...(tagsMap[file.path]?.length ? { tags: tagsMap[file.path] } : {}),
             ...(images.length > 0 ? { images } : {}),
         });
@@ -438,9 +460,19 @@ export async function importVault(
 
     // Collect all markdown files, excluding EchoVault data folder and .obsidian
     const EXCLUDED_PREFIXES = [settings.flashcardFolderPath + "/", ".obsidian/"];
-    const allFiles = vault.getMarkdownFiles().filter(
-        (f) => !EXCLUDED_PREFIXES.some((prefix) => f.path.startsWith(prefix))
-    );
+    const scopePrefixes = settings.scopedFolders
+        ? settings.scopedFolders.split(",").map((s) => s.trim()).filter(Boolean).map((s) => s.endsWith("/") ? s : s + "/")
+        : [];
+    const excludePrefixes = settings.excludeFilePrefixes
+        ? settings.excludeFilePrefixes.split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+    const allFiles = vault.getMarkdownFiles().filter((f) => {
+        if (EXCLUDED_PREFIXES.some((prefix) => f.path.startsWith(prefix))) return false;
+        if (scopePrefixes.length > 0 && !scopePrefixes.some((p) => f.path.startsWith(p))) return false;
+        const basename = f.path.split("/").pop() ?? "";
+        if (excludePrefixes.some((p) => basename.startsWith(p))) return false;
+        return true;
+    });
 
     if (allFiles.length === 0) {
         new Notice("No markdown files found in vault.");
@@ -474,6 +506,7 @@ export async function importVault(
             payloads.push({
                 path: file.path,
                 diff_content: content,
+                vault_path: vaultPath,
                 ...(tagsMap[file.path]?.length ? { tags: tagsMap[file.path] } : {}),
                 ...(images.length > 0 ? { images } : {}),
             });

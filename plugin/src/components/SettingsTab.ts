@@ -1,5 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
-import type EchoVaultPlugin from "./main";
+import type EchoVaultPlugin from "../main";
 
 export class EchoVaultSettingTab extends PluginSettingTab {
     plugin: EchoVaultPlugin;
@@ -62,6 +62,39 @@ export class EchoVaultSettingTab extends PluginSettingTab {
                     .setDynamicTooltip()
                     .onChange(async (value) => {
                         this.plugin.settings.maxCardsPerGeneration = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Scoped folders")
+            .setDesc(
+                "Only generate cards from notes inside these folders (comma-separated, e.g. \"knowledge,courses\"). " +
+                "Leave empty to process the entire vault."
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder("knowledge,courses")
+                    .setValue(this.plugin.settings.scopedFolders)
+                    .onChange(async (value) => {
+                        this.plugin.settings.scopedFolders = value;
+                        await this.plugin.saveSettings();
+                    })
+            );
+
+        new Setting(containerEl)
+            .setName("Exclude file prefixes")
+            .setDesc(
+                "Skip files whose name starts with these prefixes (comma-separated). " +
+                "Default \"_\" skips auto-generated index files like _index.md. " +
+                "Clear this field to process all files."
+            )
+            .addText((text) =>
+                text
+                    .setPlaceholder("_")
+                    .setValue(this.plugin.settings.excludeFilePrefixes)
+                    .onChange(async (value) => {
+                        this.plugin.settings.excludeFilePrefixes = value;
                         await this.plugin.saveSettings();
                     })
             );

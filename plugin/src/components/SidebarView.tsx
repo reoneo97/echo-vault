@@ -1,8 +1,8 @@
 import { ItemView, Notice, WorkspaceLeaf } from "obsidian";
 import { StrictMode } from "react";
 import { createRoot, Root } from "react-dom/client";
-import type EchoVaultPlugin from "./main";
-import { EchoVaultApp } from "./components/App";
+import type EchoVaultPlugin from "../main";
+import { EchoVaultApp } from "./App";
 
 export const VIEW_TYPE = "echovault-sidebar";
 

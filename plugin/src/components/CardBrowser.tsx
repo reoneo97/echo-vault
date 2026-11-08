@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { Notice } from "obsidian";
 import type EchoVaultPlugin from "../main";
-import { Flashcard, CardType } from "../types";
-import { getTodayDateString } from "../utils";
+import { Flashcard, CardType } from "../core/types";
+import { getTodayDateString } from "../core/utils";
 import { EmptyState } from "./EmptyState";
 import { MarkdownText } from "./MarkdownText";
 

@@ -7,18 +7,21 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-import logfire
+import mlflow
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 
 from .config import settings
-from .observability import batch_files, cards_generated, llm_errors, cards_accepted, cards_rejected, cards_edited
-from .openrouter import generate_cards_from_diff, agent_health_stream, FLASHCARD_PROMPT
+from .agents.orchestrator import run_pipeline
+from .agents.tutor import tutor_chat
+from .openrouter import agent_health_stream, FLASHCARD_PROMPT
 from .schemas import (
     BatchGenerateRequest, BatchGenerateResponse, FileResultEntry,
     FeedbackRequest, FeedbackResponse,
+    ReviewEventsRequest,
+    TutorChatRequest, TutorChatResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -91,7 +94,6 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     valid_files = [f for f in req.files if f.diff_content.strip()]
     if not valid_files:
         raise HTTPException(status_code=400, detail="all diffs are empty")
-    logfire.info("batch generate started", file_count=len(valid_files))
 
     # Per-file budgets set by plugin based on word count heuristic; default 5 if missing
     budgets = [f.max_cards if f.max_cards is not None else 5 for f in valid_files]
@@ -101,14 +103,22 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
         len(valid_files), budgets,
     )
 
+    # One session_id groups all notes in this batch for MLflow trace filtering.
+    session_id = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    experiment = "echovault-cards-evals" if req.source == "eval" else "echovault-cards"
+    mlflow.set_experiment(experiment)
+
     start = time.time()
     tasks = [
         generate_with_retry(
-            lambda f=f, budget=budget: generate_cards_from_diff(
+            lambda f=f, budget=budget: run_pipeline(
                 diff_content=f.diff_content,
                 source_note=f.path,
                 max_cards=budget,
                 images=f.images if f.images else None,
+                tags=f.tags,
+                vault_path=f.vault_path,
+                session_id=session_id,
             ),
             path=f.path,
         )
@@ -128,21 +138,7 @@ async def generate_flashcards_batch(req: BatchGenerateRequest):
     total_cards = sum(len(fr.cards) for fr in file_results)
     failures = sum(1 for fr in file_results if fr.error)
 
-    # Record custom Prometheus metrics
-    batch_files.observe(len(valid_files))
-    llm_errors.inc(failures)
-    for fr in file_results:
-        for card in fr.cards:
-            cards_generated.labels(card_type=card.type.value).inc()
-
-    logger.info("Batch done: %d cards in %.1fs across %d files", total_cards, elapsed, len(valid_files))
-    logfire.info(
-        "batch generate complete",
-        total_cards=total_cards,
-        elapsed_seconds=round(elapsed, 2),
-        files=len(valid_files),
-        failures=failures,
-    )
+    logger.info("Batch done: %d cards in %.1fs across %d files (%d failures)", total_cards, elapsed, len(valid_files), failures)
 
     # Log batch request
     log_entry = {
@@ -185,16 +181,25 @@ async def submit_feedback(req: FeedbackRequest):
     with open(log_file, "a") as f:
         f.write(json.dumps(log_entry) + "\n")
 
-    cards_accepted.inc(log_entry["accepted"])
-    cards_rejected.inc(log_entry["rejected"])
-    cards_edited.inc(log_entry["edited"])
-
     logger.info(
         "Feedback received: %d entries (%d accepted, %d rejected, %d edited)",
         log_entry["total_entries"], log_entry["accepted"],
         log_entry["rejected"], log_entry["edited"],
     )
     return FeedbackResponse(status="ok", received=len(req.entries))
+
+
+@router.post("/review-events")
+async def submit_review_events(req: ReviewEventsRequest):
+    log_entry = {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "events": [e.model_dump() for e in req.events],
+    }
+    log_file = LOGS_DIR / "review-events.jsonl"
+    with open(log_file, "a") as f:
+        f.write(json.dumps(log_entry) + "\n")
+    logger.info("Review events received: %d events", len(req.events))
+    return {"status": "ok", "received": len(req.events)}
 
 
 @router.get("/logs")
@@ -237,6 +242,29 @@ async def view_feedback_logs(request: Request, limit: int = Query(default=20, ge
     })
 
 
+@router.post("/tutor/chat", response_model=TutorChatResponse)
+async def tutor_chat_endpoint(req: TutorChatRequest):
+    """One turn of a Socratic tutor conversation.
+
+    Send `session_id` (client-generated, e.g. a timestamp) and the full
+    `history` on every call — the tutor is stateless server-side. History is
+    a list of {role, content} objects in chronological order.
+    """
+    history = [{"role": m.role, "content": m.content} for m in req.history]
+    output = await tutor_chat(
+        message=req.message,
+        session_id=req.session_id,
+        history=history,
+    )
+    return TutorChatResponse(
+        session_id=req.session_id,
+        reply=output.reply,
+        cards_referenced=output.cards_referenced,
+        assessment=output.assessment,
+        topic=output.topic,
+    )
+
+
 @router.get("/")
 async def root():
-    return {"repsonse":"Hello World"}
+    return {"response": "Hello World"}

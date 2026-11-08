@@ -1,4 +1,4 @@
-import { QAFlashcard } from "../../types";
+import { QAFlashcard } from "../../core/types";
 
 interface QACardProps {
     card: QAFlashcard;

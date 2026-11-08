@@ -18,13 +18,10 @@ make start      # install + watch mode
 ```
 src/
 ├── main.ts              # Plugin entry point — commands, sidebar, ribbon, status bar
-├── settings.ts          # Settings tab UI (Obsidian native API)
-├── sidebar-view.tsx     # Mounts React app into an Obsidian ItemView
-├── types.ts             # Shared interfaces, types, default settings
-├── utils.ts             # Helpers (ID generation, date strings)
-├── review-modal.ts      # Legacy modal-based review (pre-React)
 │
 ├── core/                # Business logic (no UI dependencies)
+│   ├── types.ts         # Shared interfaces, types, default settings
+│   ├── utils.ts         # Helpers (ID generation, date strings)
 │   ├── store.ts         # Flashcard CRUD — reads/writes flashcards.json
 │   ├── review-log.ts    # Daily review session tracking
 │   ├── generate.ts      # Commit → per-file diffs → images per file → batch backend call → save cards
@@ -33,7 +30,9 @@ src/
 │   ├── sm2.ts           # SM-2 spaced repetition algorithm
 │   └── logger.ts        # Debug logger — writes to EchoVault/echovault.log
 │
-├── components/          # React UI
+├── components/          # React UI (+ two non-React UI wiring files)
+│   ├── SettingsTab.ts   # Settings tab UI (Obsidian native API, not React)
+│   ├── SidebarView.tsx  # Mounts React app into an Obsidian ItemView
 │   ├── App.tsx          # Root component — panel navigation, state
 │   ├── Header.tsx       # Top bar with plugin title
 │   ├── Dashboard.tsx    # Home screen — stats, forecast, actions
@@ -65,12 +64,11 @@ src/
 
 ## Architecture
 
-The plugin is organized in three layers:
+The plugin is organized in two layers, plus a single entrypoint:
 
-- **Wiring** (`main.ts`, `settings.ts`, `sidebar-view.tsx`) — Obsidian plugin lifecycle, registers commands and views
-- **Shared** (`types.ts`, `utils.ts`) — used by both core and components
-- **Core** (`core/`) — business logic with no UI dependencies: data persistence, git operations, API calls, scheduling algorithm
-- **Components** (`components/`) — React UI mounted inside an Obsidian `ItemView`
+- **Entrypoint** (`main.ts`) — Obsidian plugin lifecycle, registers commands and views
+- **Core** (`core/`) — business logic with no UI dependencies: types, data persistence, git operations, API calls, scheduling algorithm
+- **Components** (`components/`) — the UI layer mounted inside an Obsidian `ItemView`. Almost all React, except `SettingsTab.ts` (Obsidian's native `PluginSettingTab` API) — it lives here because it's a UI concern, not because it's React.
 
 Data flows through the `plugin` instance which is passed to React components, giving them access to `plugin.store`, `plugin.reviewLog`, `plugin.logger`, and `plugin.app`.
 

@@ -26,7 +26,7 @@ load_dotenv()
 FIXTURES_DIR = Path(__file__).parent / "fixtures" / "standard"
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 MLFLOW_URL = os.getenv("MLFLOW_URL", "http://localhost:5001")
-EXPERIMENT_NAME = "echovault-card-generation"
+EXPERIMENT_NAME = "echovault-cards-evals"
 
 
 def load_notes(notes_dir: Path) -> list[dict]:
@@ -56,16 +56,29 @@ def fixture_set_version(notes_dir: Path) -> str:
 
 
 def call_backend(notes: list[dict], backend_url: str) -> tuple[dict, float]:
-    payload = {"files": notes, "max_cards": 10}
+    """Send notes one at a time so each gets its own timeout.
+
+    The generator→critic pipeline can take 60–120s per note; a single
+    mega-request would need a 10min+ HTTP keepalive. Serial requests are
+    more resilient: one failure doesn't abort the whole run.
+    """
+    file_results = []
     t0 = time.perf_counter()
-    response = httpx.post(
-        f"{backend_url}/generate-flashcards-batch",
-        json=payload,
-        timeout=120.0,
-    )
+    for note in notes:
+        try:
+            resp = httpx.post(
+                f"{backend_url}/generate-flashcards-batch",
+                json={"files": [note], "max_cards": 10, "source": "eval"},
+                timeout=180.0,
+            )
+            resp.raise_for_status()
+            file_results.extend(resp.json().get("file_results", []))
+            print(f"  ✓ {note['path']} ({len(file_results[-1]['cards'])} cards)")
+        except Exception as e:
+            print(f"  ✗ {note['path']}: {e}")
+            file_results.append({"source_note": note["path"], "cards": [], "error": str(e)})
     elapsed = time.perf_counter() - t0
-    response.raise_for_status()
-    return response.json(), elapsed
+    return {"file_results": file_results}, elapsed
 
 
 def is_malformed(card: dict) -> str | None:
@@ -168,52 +181,47 @@ def main():
     for k, v in metrics.items():
         print(f"  {k}: {v}")
 
-    mlflow.set_tracking_uri(args.mlflow)
-    mlflow.set_experiment(EXPERIMENT_NAME)
-
     fixture_hash = fixture_set_hash(args.notes)
     fixture_version = fixture_set_version(args.notes)
     print(f"Fixture set: {fixture_version} (hash: {fixture_hash})")
 
-    with mlflow.start_run() as run:
-        # Eval identity
-        mlflow.log_param("prompt_version", args.prompt_version)
+    # Always write the output file — useful even if MLflow is unreachable
+    output_path = Path("/tmp/echovault_eval_output.json")
+    output_path.write_text(json.dumps(response, indent=2))
+    print(f"Output saved to: {output_path}")
 
-        # Model & generation hyperparameters
-        mlflow.log_param("model", config.get("model", "unknown"))
-        mlflow.log_param("temperature", config.get("temperature", "unknown"))
-        mlflow.log_param("top_p", config.get("top_p", "unknown"))
-        mlflow.log_param("max_tokens", config.get("max_tokens", "unknown"))
+    try:
+        mlflow.set_tracking_uri(args.mlflow)
+        mlflow.set_experiment(EXPERIMENT_NAME)
 
-        # Inference config
-        mlflow.log_param("max_concurrent_llm", config.get("max_concurrent_llm", "unknown"))
-        mlflow.log_param("max_retries", config.get("max_retries", "unknown"))
+        with mlflow.start_run() as run:
+            mlflow.log_param("prompt_version", args.prompt_version)
+            mlflow.log_param("model", config.get("model", "unknown"))
+            mlflow.log_param("temperature", config.get("temperature", "unknown"))
+            mlflow.log_param("top_p", config.get("top_p", "unknown"))
+            mlflow.log_param("max_tokens", config.get("max_tokens", "unknown"))
+            mlflow.log_param("max_concurrent_llm", config.get("max_concurrent_llm", "unknown"))
+            mlflow.log_param("max_retries", config.get("max_retries", "unknown"))
+            mlflow.log_param("git_sha", config.get("git_sha", "unknown"))
+            mlflow.log_param("fixture_set_version", fixture_version)
+            mlflow.log_param("fixture_set_hash", fixture_hash)
+            mlflow.log_param("num_test_files", len(notes))
+            mlflow.log_param("total_input_words", total_input_words)
 
-        # Environment
-        mlflow.log_param("git_sha", config.get("git_sha", "unknown"))
+            for k, v in metrics.items():
+                mlflow.log_metric(k, v)
 
-        # Fixture set
-        mlflow.log_param("fixture_set_version", fixture_version)
-        mlflow.log_param("fixture_set_hash", fixture_hash)
-        mlflow.log_param("num_test_files", len(notes))
-        mlflow.log_param("total_input_words", total_input_words)
+            if prompt_text := config.get("prompt_text"):
+                prompt_path = Path("/tmp/echovault_prompt.txt")
+                prompt_path.write_text(prompt_text)
+                mlflow.log_artifact(str(prompt_path), artifact_path="prompt")
 
-        # Metrics
-        for k, v in metrics.items():
-            mlflow.log_metric(k, v)
+            mlflow.log_artifact(str(output_path), artifact_path="outputs")
 
-        # Artifacts
-        if prompt_text := config.get("prompt_text"):
-            prompt_path = Path("/tmp/echovault_prompt.txt")
-            prompt_path.write_text(prompt_text)
-            mlflow.log_artifact(str(prompt_path), artifact_path="prompt")
-
-        output_path = Path("/tmp/echovault_eval_output.json")
-        output_path.write_text(json.dumps(response, indent=2))
-        mlflow.log_artifact(str(output_path), artifact_path="outputs")
-
-        print(f"\nRun ID: {run.info.run_id}")
-        print(f"View at: {args.mlflow}")
+            print(f"\nMLflow run: {run.info.run_id}")
+            print(f"View at: {args.mlflow}")
+    except Exception as e:
+        print(f"\nWarning: MLflow logging failed ({e}) — metrics printed above, output at {output_path}")
 
 
 if __name__ == "__main__":
